@@ -21,7 +21,7 @@ import { GalleryModal } from './components/GalleryModal';
 import { ExportVideoModal } from './components/ExportVideoModal';
 import { AfterEffects } from './components/AfterEffects';
 import { Toast } from './components/Toast';
-import { generateColorPalette, generateVibe } from './services/geminiService';
+import { generateColorPalette, generateVibe } from './services/paletteService';
 import type { LiquidConfig } from './types';
 import { DEFAULT_CONFIG } from './constants';
 import { RestorePrompt } from './components/RestorePrompt';

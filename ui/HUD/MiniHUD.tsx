@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { prefersReducedMotion } from '../prefs';
 
 interface MiniHUDProps {
   visible: boolean;
@@ -12,8 +13,6 @@ export const MiniHUD: React.FC<MiniHUDProps> = ({ visible, presetName, mode, cad
   useEffect(() => setShow(visible), [visible]);
 
   // Read reduced motion with user override
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { prefersReducedMotion } = require('../prefs');
   const prefersReduced = prefersReducedMotion();
 
   return (

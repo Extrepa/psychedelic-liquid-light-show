@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { CloseIcon } from '../../components/icons/CloseIcon';
+import { prefersReducedMotion } from '../prefs';
 
 interface TopPanelProps {
   isOpen: boolean;
@@ -58,8 +59,6 @@ export const TopPanel: React.FC<TopPanelProps> = ({ isOpen, onClose, children, t
   }, [isOpen]);
 
   // Read reduced motion with user override
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { prefersReducedMotion } = require('../prefs');
   const prefersReduced = prefersReducedMotion();
 
   return (

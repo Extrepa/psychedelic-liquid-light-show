@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Psychedelic Liquid Light Show</title>
-    <link rel="stylesheet" href="https://aistudiocdn.com/static/libs/tailwind/v3.4.7/tailwind.css">
+    <!-- Tailwind via CDN (runtime). Safe for preview/prototyping. -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
       /* Ensure the app truly fills the viewport with no margins */
       html, body, #root {
@@ -29,17 +30,7 @@
 </head>
 <body class="text-white font-sans antialiased">
     <div id="root"></div>
-    <script type="importmap">
-    {
-      "imports": {
-        "react": "https://aistudiocdn.com/react@^19.2.0",
-        "react/": "https://aistudiocdn.com/react@^19.2.0/",
-        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
-        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
-      }
-    }
-    </script>
     <!-- Single entrypoint -->
-    <script type="module" src="/src/index.tsx"></script>
+    <script type="module" src="/index.tsx"></script>
 </body>
 </html>
