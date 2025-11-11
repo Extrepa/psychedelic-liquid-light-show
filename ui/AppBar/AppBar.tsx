@@ -61,7 +61,7 @@ export const AppBar: React.FC<AppBarProps> = ({
   };
 
   return (
-    <div className="fixed top-4 left-4 z-40 pointer-events-none">
+    <div className="fixed top-4 left-4 z-40 pointer-events-none" data-app-bar>
       <div className="flex items-center gap-2 p-2 bg-gray-900/70 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-2xl pointer-events-auto">
         <Tooltip text={isPlaying ? 'Pause' : 'Play'}>
           <button onClick={onTogglePlay} className="p-2 text-gray-300 hover:text-white hover:bg-gray-700 rounded-lg">

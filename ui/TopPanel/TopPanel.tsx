@@ -68,6 +68,7 @@ export const TopPanel: React.FC<TopPanelProps> = ({ isOpen, onClose, children, t
       role="dialog"
       aria-modal="true"
       aria-hidden={!isOpen}
+      data-top-panel
     >
       <div
         ref={panelRef}

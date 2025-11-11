@@ -40,3 +40,16 @@ export function prefersReducedMotion(): boolean {
   }
   return false;
 }
+
+export type ExportDefaults = { duration: number; quality: number };
+export function getExportDefaults(): ExportDefaults {
+  try {
+    const raw = localStorage.getItem('ui:export');
+    if (!raw) return { duration: 10, quality: 5_000_000 };
+    const parsed = JSON.parse(raw);
+    return { duration: parsed.duration ?? 10, quality: parsed.quality ?? 5_000_000 };
+  } catch { return { duration: 10, quality: 5_000_000 }; }
+}
+export function setExportDefaults(v: ExportDefaults) {
+  try { localStorage.setItem('ui:export', JSON.stringify(v)); } catch {}
+}

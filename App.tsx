@@ -26,6 +26,7 @@ import type { LiquidConfig } from './types';
 import { DEFAULT_CONFIG } from './constants';
 import { RestorePrompt } from './components/RestorePrompt';
 import { WelcomeScreen } from './components/WelcomeScreen';
+import { ShortcutsModal } from './components/ShortcutsModal';
 // New hooks
 import { useHistory } from './hooks/useHistory';
 import { useArtworkGallery } from './hooks/useArtworkGallery';
@@ -90,6 +91,7 @@ function App() {
   });
 
   const [activePanel, setActivePanel] = useState<Tab | null>(null);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
 
   const getCanvasDataUrlRef = useRef<(() => string) | null>(null);
   const getCanvasStreamRef = useRef<(() => MediaStream) | null>(null);
@@ -225,6 +227,20 @@ function App() {
     handleDemoEnd();
   };
   
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.key === '?' || (e.key === '/' && e.shiftKey)) && !isShortcutsOpen) {
+        e.preventDefault(); setIsShortcutsOpen(true);
+      }
+      if (e.key.toLowerCase() === 'g') setIsGridVisible(v => !v);
+      if (e.key.toLowerCase() === 'p') setIsPlaying(v => !v);
+      if (e.key.toLowerCase() === 's') setIsSaveModalOpen(true);
+      if (e.key.toLowerCase() === 'e') setIsExportModalOpen(true);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [isShortcutsOpen]);
+
   const getPanelTitle = (panel: Tab | null) => {
       if (!panel) return '';
       return panel.charAt(0).toUpperCase() + panel.slice(1);
@@ -363,6 +379,8 @@ function App() {
         downloadUrl={downloadUrl}
         setDownloadUrl={setDownloadUrl}
       />
+
+      <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
     </div>
   );
 }

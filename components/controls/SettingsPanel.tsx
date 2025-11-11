@@ -1,6 +1,8 @@
 import React from 'react';
 import { getTopPanelEnabled, setTopPanelEnabled, getPerfMode, setPerfMode, getReducedMotionPref, setReducedMotionPref, type ReducedPref } from '../../ui/prefs';
 
+import { setExportDefaults, getExportDefaults } from '../../ui/prefs';
+
 interface SettingsPanelProps {
   onClose: () => void;
   onPerfChange: (enabled: boolean) => void;
@@ -10,6 +12,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onPerfCha
   const [top, setTop] = React.useState<boolean>(getTopPanelEnabled());
   const [perf, setPerf] = React.useState<boolean>(getPerfMode());
   const [rm, setRm] = React.useState<ReducedPref>(getReducedMotionPref());
+  const [exp, setExp] = React.useState(() => getExportDefaults());
 
   const applyTop = (v: boolean) => {
     setTop(v);
@@ -53,6 +56,25 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onPerfCha
           <button onClick={() => applyRm('off')} className={`px-2 py-1 rounded-md border ${rm==='off'?'border-purple-500 text-white bg-purple-600/30':'border-gray-600 text-gray-200 bg-gray-700'}`}>Off</button>
         </div>
         <p className="text-xs text-gray-500 mt-1">Overrides system preference for panel/HUD animations.</p>
+      </section>
+
+      <section>
+        <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Export defaults</h3>
+        <div className="flex gap-2 items-center text-sm text-gray-200">
+          <label>Duration</label>
+          <select value={exp.duration} onChange={e=>{const v={...exp, duration:parseInt(e.target.value)}; setExp(v); setExportDefaults(v);}} className="bg-gray-800 text-gray-200 rounded-md px-2 py-1 border border-gray-700">
+            <option value={5}>5s</option>
+            <option value={10}>10s</option>
+            <option value={15}>15s</option>
+            <option value={30}>30s</option>
+          </select>
+          <label>Quality</label>
+          <select value={exp.quality} onChange={e=>{const v={...exp, quality:parseInt(e.target.value)}; setExp(v); setExportDefaults(v);}} className="bg-gray-800 text-gray-200 rounded-md px-2 py-1 border border-gray-700">
+            <option value={1000000}>Low (1 Mbps)</option>
+            <option value={5000000}>Medium (5 Mbps)</option>
+            <option value={10000000}>High (10 Mbps)</option>
+          </select>
+        </div>
       </section>
 
       <div className="flex justify-end">

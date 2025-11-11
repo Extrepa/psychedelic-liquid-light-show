@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { FilmIcon } from './icons/FilmIcon';
 import { CloseIcon } from './icons/CloseIcon';
+import { getExportDefaults } from '../ui/prefs';
 
 interface ExportVideoModalProps {
   isOpen: boolean;
@@ -19,6 +20,9 @@ export const ExportVideoModal: React.FC<ExportVideoModalProps> = ({ isOpen, onCl
   useEffect(() => {
     if (isOpen) {
       setDownloadUrl(null); // Reset download URL when modal opens
+      const d = getExportDefaults();
+      setDuration(d.duration);
+      setQuality(d.quality);
     }
   }, [isOpen, setDownloadUrl]);
 
