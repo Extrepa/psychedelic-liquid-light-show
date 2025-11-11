@@ -1,0 +1,122 @@
+
+import type { LiquidConfig } from '../types';
+
+export interface Preset {
+  name: string;
+  config: Partial<LiquidConfig>;
+}
+
+export const PRESETS: Preset[] = [
+  {
+    name: 'Cosmic Soup',
+    config: {
+      density: 0.9,
+      velocity: 0.3,
+      viscosity: 0.2,
+      pressure: 0.8,
+      diffusion: 0.6,
+      bloom: 0.5,
+      sunrays: 0.5,
+      colors: ['#ff0000', '#00ff00', '#0000ff'],
+      splatRadius: 0.25,
+    },
+  },
+  {
+    name: 'Lava Lamp',
+    config: {
+      density: 0.8,
+      velocity: 0.2,
+      viscosity: 0.7,
+      pressure: 0.1,
+      diffusion: 0.8,
+      bloom: 0.7,
+      sunrays: 0.2,
+      colors: ['#ff4800', '#ff8400', '#ff0000'],
+      splatRadius: 0.5,
+    },
+  },
+  {
+    name: 'Aurora Borealis',
+    config: {
+      density: 0.5,
+      velocity: 0.7,
+      viscosity: 0.1,
+      pressure: 0.5,
+      diffusion: 0.4,
+      bloom: 0.4,
+      sunrays: 0.6,
+      colors: ['#00ff99', '#00aaff', '#9933ff'],
+      splatRadius: 0.4,
+    },
+  },
+    {
+    name: 'Neon Noir',
+    config: {
+      density: 0.6,
+      velocity: 0.8,
+      viscosity: 0.1,
+      pressure: 0.7,
+      diffusion: 0.5,
+      bloom: 0.8,
+      sunrays: 0.3,
+      colors: ['#ff00ff', '#00ffff', '#ff00aa', '#00ffaa'],
+      splatRadius: 0.3,
+    },
+  },
+  {
+    name: 'Oceanic Depth',
+    config: {
+      density: 0.9,
+      velocity: 0.1,
+      viscosity: 0.8,
+      pressure: 0.2,
+      diffusion: 0.9,
+      bloom: 0.2,
+      sunrays: 0.1,
+      colors: ['#000033', '#002266', '#004499', '#0066cc'],
+      splatRadius: 0.6,
+    },
+  },
+  {
+    name: 'Fairy Garden',
+    config: {
+      density: 0.4,
+      velocity: 0.5,
+      viscosity: 0.3,
+      pressure: 0.4,
+      diffusion: 0.7,
+      bloom: 0.6,
+      sunrays: 0.7,
+      colors: ['#ffb3de', '#ffd6ab', '#ffffd1', '#abffd6', '#a3e6ff'],
+      splatRadius: 0.2,
+    },
+  },
+  {
+    name: 'Ink Drop',
+    config: {
+      density: 1.0,
+      velocity: 0.5,
+      viscosity: 0.01,
+      pressure: 0.2,
+      diffusion: 0.0,
+      bloom: 0.1,
+      sunrays: 0.1,
+      colors: ['#ffffff', '#cccccc', '#999999'],
+      splatRadius: 0.1,
+    },
+  },
+  {
+    name: 'Pastel Dreams',
+    config: {
+      density: 0.7,
+      velocity: 0.4,
+      viscosity: 0.3,
+      pressure: 0.6,
+      diffusion: 0.7,
+      bloom: 0.6,
+      sunrays: 0.3,
+      colors: ['#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff', '#a0c4ff', '#bdb2ff'],
+      splatRadius: 0.3,
+    },
+  },
+];
