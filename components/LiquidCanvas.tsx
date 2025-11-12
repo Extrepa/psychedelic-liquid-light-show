@@ -30,8 +30,11 @@ const Canvas2DFluid = (canvas: HTMLCanvasElement, initialConfig: LiquidConfig, o
   const draw = () => {
     if (ctx) {
       // Use 'source-over' for the fade effect to create trails
+      // Lower alpha = slower fade (longer trails)
+      // Use diffusion to control fade speed: high diffusion = very slow fade
+      const fadeAlpha = Math.max(0.001, 0.15 - (currentConfig.diffusion * 0.14)); // 0.15 to 0.01
       ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.fillStyle = `rgba(0, 0, 0, ${fadeAlpha})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Switch to the configured blend mode for color interaction
@@ -95,7 +98,11 @@ const Canvas2DFluid = (canvas: HTMLCanvasElement, initialConfig: LiquidConfig, o
     },
     splat: (x: number, y: number, radius: number, color: string) => {
       const { devicePixelRatio = 1 } = window;
-      const maxLife = perf ? 60 + Math.random() * 30 : 80 + Math.random() * 50;
+      // Use diffusion to control particle lifetime (0=fast fade, 1=long fade up to 2 minutes)
+      // At 60fps: 60 * 120 = 7200 frames = 2 minutes max
+      const lifetimeMultiplier = 1 + (currentConfig.diffusion * 60); // 1x to 61x base lifetime
+      const baseLife = perf ? 60 + Math.random() * 30 : 120 + Math.random() * 60;
+      const maxLife = baseLife * lifetimeMultiplier;
       const numParticles = perf ? 3 : 5; // Fewer particles in performance mode
 
       for (let i = 0; i < numParticles; i++) {
@@ -114,8 +121,11 @@ const Canvas2DFluid = (canvas: HTMLCanvasElement, initialConfig: LiquidConfig, o
         particles.push(particle);
       }
       
-      const cap = perf ? 150 : 300;
+      // Safety cap: limit total particles to prevent performance issues
+      // With longer lifetimes, we need a higher cap
+      const cap = perf ? 500 : 2000;
       if (particles.length > cap) {
+          // Remove oldest particles (from beginning of array)
           particles.splice(0, particles.length - cap);
       }
     },
@@ -145,6 +155,7 @@ const Canvas2DFluid = (canvas: HTMLCanvasElement, initialConfig: LiquidConfig, o
 
 import type { Preset } from '../constants/presets';
 import { nextIndex, type CycleMode } from '../features/presets/PresetCycleEngine';
+import { generateBrushPattern, sampleStampImage } from '../utils/brushPatterns';
 
 interface LiquidCanvasProps {
   config: LiquidConfig;
@@ -170,7 +181,8 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<LiquidRenderer | null>(null);
   const fallbackFluidRef = useRef<any>(null);
-  const [useWebGL, setUseWebGL] = useState<boolean>(supportsWebGL());
+  // Temporarily disable WebGL while fixing PIXI v8 shader issues
+  const [useWebGL, setUseWebGL] = useState<boolean>(false); // Was: supportsWebGL()
   const isPointerDownRef = useRef(false);
   
   // Store config in a ref to avoid re-creating callbacks on every config change for performance
@@ -286,7 +298,8 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
   useEffect(() => {
     const getUrl = () => {
       if (rendererRef.current) {
-        return rendererRef.current.getCanvas().toDataURL('image/jpeg', 0.8);
+        const canvas = rendererRef.current.getCanvas();
+        return canvas ? canvas.toDataURL('image/jpeg', 0.8) : '';
       } else if (canvasRef.current) {
         return canvasRef.current.toDataURL('image/jpeg', 0.8);
       }
@@ -296,7 +309,8 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
     
     const getStream = () => {
       if (rendererRef.current) {
-        return rendererRef.current.getCanvas().captureStream(30);
+        const canvas = rendererRef.current.getCanvas();
+        return canvas ? canvas.captureStream(30) : new MediaStream();
       } else if (canvasRef.current) {
         return canvasRef.current.captureStream(30);
       }
@@ -327,6 +341,8 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
     (window.__onCycleStep || onCommitConfig) && (window.__onCycleStep?.(presetName), null);
   }, []);
 
+  const lastSplatPosRef = useRef<{ x: number; y: number } | null>(null);
+
   const splat = useCallback((x: number, y: number) => {
     if (isDemoModeRef.current) return;
 
@@ -350,13 +366,52 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
     const palette = phase === 'oil' ? (currentConfig.oilPalette || currentConfig.colors) : (currentConfig.waterPalette || currentConfig.colors);
     const color = palette[currentActiveColorIndex] || palette[0] || '#ff0000';
     const canvasWidth = containerRef.current?.clientWidth || 800;
-    const radius = canvasWidth * 0.05 * (currentConfig.splatRadius ?? 0.25);
+    const baseRadius = canvasWidth * 0.05 * (currentConfig.splatRadius ?? 0.25);
     
-    if (rendererRef.current) {
-      rendererRef.current.splat(x, y, radius, color, phase);
-    } else if (fallbackFluidRef.current) {
-      fallbackFluidRef.current.splat(x, y, radius, color);
+    // Generate pattern-based splats
+    const brushPattern = currentConfig.brushPattern || 'single';
+    
+    // Handle stamp pattern specially
+    if (brushPattern === 'stamp' && currentConfig.brushStampImage) {
+      sampleStampImage(
+        currentConfig.brushStampImage,
+        x,
+        y,
+        baseRadius * 4,
+        (points, colors) => {
+          points.forEach((point, i) => {
+            const stampColor = colors[i] || color;
+            if (rendererRef.current) {
+              rendererRef.current.splat(point.x, point.y, point.radius, stampColor, phase);
+            } else if (fallbackFluidRef.current) {
+              fallbackFluidRef.current.splat(point.x, point.y, point.radius, stampColor);
+            }
+          });
+        }
+      );
+    } else {
+      // Generate pattern points
+      const points = generateBrushPattern(
+        x,
+        y,
+        baseRadius,
+        currentConfig,
+        canvasWidth,
+        lastSplatPosRef.current || undefined
+      );
+      
+      // Apply each splat point
+      points.forEach(point => {
+        if (rendererRef.current) {
+          rendererRef.current.splat(point.x, point.y, point.radius, color, phase);
+        } else if (fallbackFluidRef.current) {
+          fallbackFluidRef.current.splat(point.x, point.y, point.radius, color);
+        }
+      });
     }
+    
+    // Store last position for stripes pattern
+    lastSplatPosRef.current = { x, y };
   }, [applyEphemeralPreset, cycleCadence, cycleMode, presets, selectedPresets]);
   
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {

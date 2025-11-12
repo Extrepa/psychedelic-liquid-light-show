@@ -38,6 +38,12 @@ export interface LiquidConfig {
   // Input/tool
   activePhase?: 'oil' | 'water';
   dropperEnabled?: boolean;
+  
+  // Brush patterns
+  brushPattern?: 'single' | 'polkadots' | 'stripes' | 'line' | 'text' | 'stamp';
+  brushText?: string;
+  brushStampImage?: string; // base64 data URL
+  brushSpacing?: number; // for patterns like stripes/polkadots
 }
 
 export interface SavedArtwork {

@@ -1,12 +1,25 @@
 // passthrough.vert.glsl
-// Shared vertex shader for all full-screen quad passes (GLSL ES 1.00 / WebGL1)
+// Default vertex shader for PIXI v8 filters
 
-attribute vec2 aVertexPosition;
-attribute vec2 aTextureCoord;
+in vec2 aPosition;
+out vec2 vTextureCoord;
 
-varying vec2 vTextureCoord;
+uniform vec4 uInputSize;
+uniform vec4 uOutputFrame;
+uniform vec4 uOutputTexture;
+
+vec4 filterVertexPosition() {
+    vec2 position = aPosition * uOutputFrame.zw + uOutputFrame.xy;
+    position.x = position.x * (2.0 / uOutputTexture.x) - 1.0;
+    position.y = position.y * (2.0 / uOutputTexture.y) - 1.0;
+    return vec4(position, 0.0, 1.0);
+}
+
+vec2 filterTextureCoord() {
+    return aPosition * (uOutputFrame.zw * uInputSize.zw);
+}
 
 void main() {
-  vTextureCoord = aTextureCoord;
-  gl_Position = vec4(aVertexPosition, 0.0, 1.0);
+    gl_Position = filterVertexPosition();
+    vTextureCoord = filterTextureCoord();
 }

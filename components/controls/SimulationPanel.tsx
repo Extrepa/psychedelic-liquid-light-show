@@ -42,8 +42,8 @@ export const SimulationPanel: React.FC<SimulationPanelProps> = ({ config, update
           <Tooltip text="An external force applied to the fluid.">
             <Slider label="Pressure" value={config.pressure} onChange={v => updateConfig({ pressure: v })} />
           </Tooltip>
-          <Tooltip text="How quickly colors mix and spread.">
-            <Slider label="Diffusion" value={config.diffusion} onChange={v => updateConfig({ diffusion: v })} />
+          <Tooltip text="How long particles stay visible before fading. Higher = longer trails.">
+            <Slider label="Fade Speed" value={config.diffusion} onChange={v => updateConfig({ diffusion: v })} />
           </Tooltip>
         </div>
       </div>

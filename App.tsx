@@ -28,6 +28,7 @@ import { DEFAULT_CONFIG } from './constants';
 import { RestorePrompt } from './components/RestorePrompt';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { ShortcutsModal } from './components/ShortcutsModal';
+import { GestureControls } from './components/GestureControls';
 // New hooks
 import { useHistory } from './hooks/useHistory';
 import { useArtworkGallery } from './hooks/useArtworkGallery';
@@ -96,6 +97,7 @@ function App() {
 
   const getCanvasDataUrlRef = useRef<(() => string) | null>(null);
   const getCanvasStreamRef = useRef<(() => MediaStream) | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const { showRestorePrompt, handleRestore, handleDismiss } = useSessionPersistence({
     enabled: !isWelcomeScreenVisible,
@@ -248,9 +250,10 @@ function App() {
   }
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-gray-900 flex flex-col font-sans antialiased">
+    <div ref={containerRef} className="relative w-screen h-screen overflow-hidden bg-gray-900 flex flex-col font-sans antialiased">
       <BackgroundGradient />
       <Toast toast={toast} onClose={() => setToast(null)} />
+      {!isWelcomeScreenVisible && <GestureControls config={config} updateConfig={updateConfigWithColorGuard} containerRef={containerRef} />}
       <MiniHUD visible={hudVisible && cycleEnabled && selectedPresets.length > 0} presetName={hudPreset} mode={cycleMode} cadence={cadence} />
       {showRestorePrompt && <RestorePrompt onRestore={handleRestore} onDismiss={handleDismiss} />}
       {isWelcomeScreenVisible && <WelcomeScreen onBegin={handleBegin} />}

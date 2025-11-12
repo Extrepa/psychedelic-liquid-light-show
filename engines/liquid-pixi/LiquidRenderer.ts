@@ -35,25 +35,26 @@ export class LiquidRenderer {
   private app: PIXI.Application;
   private config: LiquidConfig;
   private performanceMode: boolean;
+  private initialized: boolean = false;
   
   // Render targets (ping-pong)
-  private velocityRT: [PIXI.RenderTexture, PIXI.RenderTexture];
-  private pressureRT: [PIXI.RenderTexture, PIXI.RenderTexture];
-  private divergenceRT: PIXI.RenderTexture;
-  private oilFieldRT: [PIXI.RenderTexture, PIXI.RenderTexture];
-  private waterFieldRT: [PIXI.RenderTexture, PIXI.RenderTexture];
-  private backgroundRT: PIXI.RenderTexture;
+  private velocityRT!: [PIXI.RenderTexture, PIXI.RenderTexture];
+  private pressureRT!: [PIXI.RenderTexture, PIXI.RenderTexture];
+  private divergenceRT!: PIXI.RenderTexture;
+  private oilFieldRT!: [PIXI.RenderTexture, PIXI.RenderTexture];
+  private waterFieldRT!: [PIXI.RenderTexture, PIXI.RenderTexture];
+  private backgroundRT!: PIXI.RenderTexture;
   
   // Shader programs (PIXI.Filter wraps them)
-  private advectFilter: PIXI.Filter;
-  private divergenceFilter: PIXI.Filter;
-  private pressureFilter: PIXI.Filter;
-  private gradientFilter: PIXI.Filter;
-  private diffuseFilter: PIXI.Filter;
-  private splatFilter: PIXI.Filter;
-  private surfaceTensionFilter: PIXI.Filter;
-  private separationFilter: PIXI.Filter;
-  private shadeFilter: PIXI.Filter;
+  private advectFilter!: PIXI.Filter;
+  private divergenceFilter!: PIXI.Filter;
+  private pressureFilter!: PIXI.Filter;
+  private gradientFilter!: PIXI.Filter;
+  private diffuseFilter!: PIXI.Filter;
+  private splatFilter!: PIXI.Filter;
+  private surfaceTensionFilter!: PIXI.Filter;
+  private separationFilter!: PIXI.Filter;
+  private shadeFilter!: PIXI.Filter;
   
   // Simulation state
   private simWidth: number = 0;
@@ -65,8 +66,8 @@ export class LiquidRenderer {
   private isRunning: boolean = false;
   
   // Quad sprite for full-screen passes
-  private quadSprite: PIXI.Sprite;
-  private outputSprite: PIXI.Sprite;
+  private quadSprite!: PIXI.Sprite;
+  private outputSprite!: PIXI.Sprite;
   
   constructor(options: LiquidRendererOptions) {
     const caps = detectWebGLCapabilities();
@@ -77,7 +78,7 @@ export class LiquidRenderer {
     this.config = options.config;
     this.performanceMode = options.performanceMode ?? false;
     
-    // Initialize PIXI app
+    // Initialize PIXI app (async)
     this.app = new PIXI.Application();
     this.app.init({
       width: options.parent.clientWidth,
@@ -106,6 +107,12 @@ export class LiquidRenderer {
       
       // Listen for resize
       window.addEventListener('resize', this.handleResize);
+      
+      this.initialized = true;
+      console.log('[LiquidRenderer] Initialized successfully');
+    }).catch((err) => {
+      console.error('[LiquidRenderer] Failed to initialize:', err);
+      throw err;
     });
   }
   
@@ -153,10 +160,11 @@ export class LiquidRenderer {
   }
   
   private createShaders() {
+    // Note: PIXI v8 filters only need fragment shaders; vertex shader is provided by PIXI
+    // For now, create simple passthrough filters until shader system is properly set up
     // Advection
     this.advectFilter = new PIXI.Filter({
       glProgram: GlProgram.from({
-        vertex: passthroughVert,
         fragment: advectFrag,
         name: 'advect',
       }),
@@ -330,7 +338,7 @@ export class LiquidRenderer {
    * Start the simulation loop
    */
   public play() {
-    if (this.isRunning) return;
+    if (!this.initialized || this.isRunning) return;
     this.isRunning = true;
     this.lastTime = performance.now();
     this.loop();
@@ -351,7 +359,7 @@ export class LiquidRenderer {
    * Main simulation loop
    */
   private loop = () => {
-    if (!this.isRunning) return;
+    if (!this.isRunning || !this.initialized) return;
     
     const now = performance.now();
     let frameDt = (now - this.lastTime) / 1000;
@@ -506,6 +514,7 @@ export class LiquidRenderer {
    * Inject a splat (oil or water)
    */
   public splat(x: number, y: number, radius: number, color: string, phase: 'oil' | 'water') {
+    if (!this.initialized) return;
     const fieldRT = phase === 'oil' ? this.oilFieldRT : this.waterFieldRT;
     const palette = phase === 'oil' ? this.config.oilPalette : this.config.waterPalette;
     
@@ -532,13 +541,16 @@ export class LiquidRenderer {
    */
   public updateConfig(newConfig: LiquidConfig) {
     this.config = { ...this.config, ...newConfig };
-    this.updateUniforms();
+    if (this.initialized) {
+      this.updateUniforms();
+    }
   }
   
   /**
    * Clear all fields
    */
   public clear() {
+    if (!this.initialized) return;
     this.clearRT(this.velocityRT[0]);
     this.clearRT(this.pressureRT[0]);
     this.clearRT(this.oilFieldRT[0]);
@@ -550,15 +562,18 @@ export class LiquidRenderer {
    */
   public destroy() {
     this.pause();
-    window.removeEventListener('resize', this.handleResize);
-    this.app.destroy(true, { children: true, texture: true });
+    if (this.initialized) {
+      window.removeEventListener('resize', this.handleResize);
+      this.app.destroy(true, { children: true, texture: true });
+    }
+    this.initialized = false;
   }
   
   /**
    * Get the canvas element for capture
    */
-  public getCanvas(): HTMLCanvasElement {
-    return this.app.canvas as HTMLCanvasElement;
+  public getCanvas(): HTMLCanvasElement | null {
+    return this.initialized ? (this.app.canvas as HTMLCanvasElement) : null;
   }
   
   // ===== HELPERS =====
@@ -604,22 +619,27 @@ export class LiquidRenderer {
   
   private updateUniforms() {
     // Update dynamic uniforms based on current config
-    const sepUniforms = (this.separationFilter.resources as any).separationUniforms?.uniforms;
-    if (sepUniforms) {
-      sepUniforms.uOilDensity = this.config.oilDensity ?? 0.85;
-      sepUniforms.uWaterDensity = this.config.waterDensity ?? 1.0;
-      sepUniforms.uGravityStrength = this.config.gravityStrength ?? 0.4;
-      sepUniforms.uGravityDir = this.computeGravityDir();
-    }
-    
-    const shadeUniforms = (this.shadeFilter.resources as any).shadeUniforms?.uniforms;
-    if (shadeUniforms) {
-      shadeUniforms.uRefractiveIndexOil = this.config.refractiveIndexOil ?? 1.45;
-      shadeUniforms.uGloss = this.config.gloss ?? 0.75;
-      shadeUniforms.uLightDir = this.computeLightDir();
-      shadeUniforms.uLightIntensity = this.config.lightIntensity ?? 1.0;
-      shadeUniforms.uRefractionStrength = this.config.refractionStrength ?? 0.6;
-      shadeUniforms.uThinFilm = this.performanceMode ? 0.0 : (this.config.thinFilm ? 1.0 : 0.0);
+    // PIXI v8: access uniforms through filter.resources.uniformGroupName.uniforms
+    try {
+      const sepRes = this.separationFilter.resources as any;
+      if (sepRes.separationUniforms?.uniforms) {
+        sepRes.separationUniforms.uniforms.uOilDensity = this.config.oilDensity ?? 0.85;
+        sepRes.separationUniforms.uniforms.uWaterDensity = this.config.waterDensity ?? 1.0;
+        sepRes.separationUniforms.uniforms.uGravityStrength = this.config.gravityStrength ?? 0.4;
+        sepRes.separationUniforms.uniforms.uGravityDir = this.computeGravityDir();
+      }
+      
+      const shadeRes = this.shadeFilter.resources as any;
+      if (shadeRes.shadeUniforms?.uniforms) {
+        shadeRes.shadeUniforms.uniforms.uRefractiveIndexOil = this.config.refractiveIndexOil ?? 1.45;
+        shadeRes.shadeUniforms.uniforms.uGloss = this.config.gloss ?? 0.75;
+        shadeRes.shadeUniforms.uniforms.uLightDir = this.computeLightDir();
+        shadeRes.shadeUniforms.uniforms.uLightIntensity = this.config.lightIntensity ?? 1.0;
+        shadeRes.shadeUniforms.uniforms.uRefractionStrength = this.config.refractionStrength ?? 0.6;
+        shadeRes.shadeUniforms.uniforms.uThinFilm = this.performanceMode ? 0.0 : (this.config.thinFilm ? 1.0 : 0.0);
+      }
+    } catch (err) {
+      console.warn('[LiquidRenderer] Failed to update uniforms:', err);
     }
   }
   
