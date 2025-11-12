@@ -1,5 +1,5 @@
 import React from 'react';
-import { PRESETS } from '../../constants/presets';
+import { PRESETS, type PresetCategory } from '../../constants/presets';
 import type { LiquidConfig } from '../../types';
 
 export type CycleMode = 'sequential' | 'pingpong' | 'random';
@@ -18,16 +18,28 @@ interface PresetStripProps {
 }
 
 export const PresetStrip: React.FC<PresetStripProps> = ({ onApply, selected, onToggleSelect, cycleEnabled, setCycleEnabled, cycleMode, setCycleMode, cadence, setCadence }) => {
+  const [category, setCategory] = React.useState<'All' | PresetCategory>('All');
+  const cats: ('All' | PresetCategory)[] = ['All','Core','Acid','Goofy','Nitrous','Healing','Blends'];
+  const visible = category === 'All' ? PRESETS : PRESETS.filter(p => p.category === category);
   return (
     <div className="fixed top-[4rem] left-4 z-38 pointer-events-none">
       <div className="flex items-center gap-2 p-2 bg-gray-900/70 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-2xl pointer-events-auto max-w-[92vw] overflow-x-auto">
-        {PRESETS.map((p, i) => {
-          const isSel = selected.includes(i);
+        {/* Categories */}
+        {cats.map(c => (
+          <button key={c} onClick={() => setCategory(c)} className={`px-2 py-1 text-xs rounded-full border ${category===c ? 'bg-purple-600/40 text-white border-purple-500' : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'}`}>{c}</button>
+        ))}
+        
+        <div className="w-px h-6 bg-gray-700 mx-1" />
+        
+        {visible.map((p, i) => {
+          // compute actual index in PRESETS for selection toggle
+          const idx = PRESETS.findIndex(pp => pp.name === p.name);
+          const isSel = selected.includes(idx);
           return (
             <button
               key={p.name}
-              onClick={(e) => {
-                if (e.metaKey || e.ctrlKey) onToggleSelect(i);
+onClick={(e) => {
+                if (e.metaKey || e.ctrlKey) onToggleSelect(idx);
                 else onApply(p.config);
               }}
               onKeyDown={(e) => {

@@ -169,6 +169,62 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({ config, updateConfig
         </div>
       </div>
 
+      {/* Display section (Brightness, Flash/Flicker, Parallax, Runoff) */}
+      <div>
+        <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Display</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Tooltip text="Overall brightness of the scene.">
+            <Slider label={`Brightness`} value={config.sceneBrightness ?? 1.0} onChange={v => updateConfig({ sceneBrightness: v })} min={0.6} max={1.8} step={0.05} />
+          </Tooltip>
+
+          <Tooltip text="Flash a light when the window resizes (dramatic effect).">
+            <Toggle label={<>Resize Flash</>} checked={config.flashOnResize ?? true} onChange={v => updateConfig({ flashOnResize: v })} />
+          </Tooltip>
+          {config.flashOnResize !== false && (
+            <>
+              <Tooltip text="How strong the resize flash is.">
+                <Slider label={`Flash Intensity`} value={config.flashIntensity ?? 0.15} onChange={v => updateConfig({ flashIntensity: v })} min={0} max={0.5} step={0.01} />
+              </Tooltip>
+              <Tooltip text="How long the flash lasts.">
+                <Slider label={`Flash Duration`} value={config.flashDurationMs ?? 300} onChange={v => updateConfig({ flashDurationMs: v })} min={100} max={1500} step={50} />
+              </Tooltip>
+            </>
+          )}
+
+          <Tooltip text="Subtle flicker when drops hit (mixing energy).">
+            <Toggle label={<>On-Splat Flicker</>} checked={config.flickerEnabled ?? false} onChange={v => updateConfig({ flickerEnabled: v })} />
+          </Tooltip>
+          {config.flickerEnabled && (
+            <Tooltip text="How strong the flicker is.">
+              <Slider label={`Flicker Intensity`} value={config.flickerIntensity ?? 0.2} onChange={v => updateConfig({ flickerIntensity: v })} min={0} max={0.8} step={0.02} />
+            </Tooltip>
+          )}
+
+          <Tooltip text="Slight 3D tilt that reacts to cursor.">
+            <Toggle label={<>Parallax</>} checked={config.sceneParallaxEnabled ?? false} onChange={v => updateConfig({ sceneParallaxEnabled: v })} />
+          </Tooltip>
+          {config.sceneParallaxEnabled && (
+            <Tooltip text="How much the scene tilts left/right with cursor.">
+              <Slider label={`Parallax Amount`} value={config.sceneParallaxAmount ?? 0.5} onChange={v => updateConfig({ sceneParallaxAmount: v })} min={0} max={1} step={0.05} />
+            </Tooltip>
+          )}
+
+          <Tooltip text="Enable drips to run off the edges instead of vanishing.">
+            <Toggle label={<>Edge Runoff</>} checked={config.edgeRunoffEnabled ?? true} onChange={v => updateConfig({ edgeRunoffEnabled: v })} />
+          </Tooltip>
+          {config.edgeRunoffEnabled && (
+            <>
+              <Tooltip text="Thickness of runoff lines.">
+                <Slider label={`Runoff Thickness`} value={config.edgeRunoffThicknessPx ?? 4} onChange={v => updateConfig({ edgeRunoffThicknessPx: v })} min={1} max={12} step={1} />
+              </Tooltip>
+              <Tooltip text="How far runoff travels.">
+                <Slider label={`Runoff Length`} value={config.edgeRunoffLengthScale ?? 0.6} onChange={v => updateConfig({ edgeRunoffLengthScale: v })} min={0.2} max={1.2} step={0.05} />
+              </Tooltip>
+            </>
+          )}
+        </div>
+      </div>
+
       <div>
         <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Overlays</h3>
         <Tooltip text="Toggle a visual grid for alignment.">

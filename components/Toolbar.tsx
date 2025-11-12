@@ -15,7 +15,7 @@ import { GalleryIcon } from './icons/GalleryIcon';
 import { HomeIcon } from './icons/HomeIcon';
 import { GearIcon } from './icons/GearIcon';
 
-export type Tab = 'simulation' | 'colors' | 'effects' | 'brush' | 'settings';
+export type Tab = 'simulation' | 'colors' | 'effects' | 'brush' | 'presets' | 'settings';
 
 interface ToolbarProps {
     activePanel: Tab | null;
@@ -36,6 +36,7 @@ export const TABS: { id: Tab, label: string, icon: React.FC<React.SVGProps<SVGSV
     { id: 'colors', label: 'Colors', icon: PaletteIcon },
     { id: 'effects', label: 'Effects', icon: WandIcon },
     { id: 'brush', label: 'Brush', icon: PaintbrushIcon },
+    { id: 'presets', label: 'Presets', icon: PaletteIcon },
     { id: 'settings', label: 'Settings', icon: GearIcon },
 ];
 

@@ -15,6 +15,7 @@ import { SettingsPanel } from './components/controls/SettingsPanel';
 import { ColorPanel } from './components/controls/ColorPanel';
 import { EffectsPanel } from './components/controls/EffectsPanel';
 import { BrushPanel } from './components/controls/BrushPanel';
+import { PresetsPanel } from './components/controls/PresetsPanel';
 import { BackgroundGradient } from './components/BackgroundGradient';
 import { BackgroundPattern } from './components/BackgroundPattern';
 import { Dropper } from './components/Dropper';
@@ -101,6 +102,7 @@ function App() {
   const getCanvasStreamRef = useRef<(() => MediaStream) | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasClearRef = useRef<(() => void) | null>(null);
+  const setSymmetryOriginModeRef = useRef<((enabled: boolean) => void) | null>(null);
 
   const { showRestorePrompt, handleRestore, handleDismiss } = useSessionPersistence({
     enabled: !isWelcomeScreenVisible,
@@ -331,8 +333,9 @@ function App() {
         >
           {activePanel === 'simulation' && <SimulationPanel config={config} updateConfig={updateConfigWithColorGuard} />}
           {activePanel === 'colors' && <ColorPanel config={config} updateConfig={updateConfigWithColorGuard} onGeneratePalette={handleGeneratePalette} onGenerateVibe={handleGenerateVibe} isGenerating={isGenerating} activeColorIndex={activeColorIndex} setActiveColorIndex={setActiveColorIndex} />}
-                {activePanel === 'effects' && <EffectsPanel config={config} updateConfig={updateConfigWithColorGuard} isGridVisible={isGridVisible} setIsGridVisible={setIsGridVisible} />}
-                {activePanel === 'brush' && <BrushPanel config={config} updateConfig={updateConfigWithColorGuard} />}
+          {activePanel === 'effects' && <EffectsPanel config={config} updateConfig={updateConfigWithColorGuard} isGridVisible={isGridVisible} setIsGridVisible={setIsGridVisible} />}
+                {activePanel === 'brush' && <BrushPanel config={config} updateConfig={updateConfigWithColorGuard} onSetSymmetryOrigin={() => setSymmetryOriginModeRef.current?.(true)} />}
+                {activePanel === 'presets' && <PresetsPanel onApply={(cfg)=> updateConfigWithColorGuard(cfg)} />}
                 {activePanel === 'settings' && <SettingsPanel onClose={() => setActivePanel(null)} onPerfChange={(v)=> setPerformanceMode(v)} />}
             </TopPanel>
       )}
@@ -359,7 +362,8 @@ function App() {
             {activePanel === 'simulation' && <SimulationPanel config={config} updateConfig={updateConfigWithColorGuard} />}
             {activePanel === 'colors' && <ColorPanel config={config} updateConfig={updateConfigWithColorGuard} onGeneratePalette={handleGeneratePalette} onGenerateVibe={handleGenerateVibe} isGenerating={isGenerating} activeColorIndex={activeColorIndex} setActiveColorIndex={setActiveColorIndex} />}
             {activePanel === 'effects' && <EffectsPanel config={config} updateConfig={updateConfigWithColorGuard} isGridVisible={isGridVisible} setIsGridVisible={setIsGridVisible} />}
-            {activePanel === 'brush' && <BrushPanel config={config} updateConfig={updateConfigWithColorGuard} />}
+            {activePanel === 'brush' && <BrushPanel config={config} updateConfig={updateConfigWithColorGuard} onSetSymmetryOrigin={() => setSymmetryOriginModeRef.current?.(true)} />}
+            {activePanel === 'presets' && <PresetsPanel onApply={(cfg)=> updateConfigWithColorGuard(cfg)} />}
           </FlyoutPanel>
         </>
       )}
@@ -370,11 +374,14 @@ function App() {
         <AfterEffects config={config}>
           <LiquidCanvas
             config={config}
+            updateConfig={updateConfigWithColorGuard}
             isPlaying={isPlaying}
             activeColorIndex={activeColorIndex}
             setGetDataUrlCallback={(callback) => getCanvasDataUrlRef.current = callback}
             setGetStreamCallback={(callback) => getCanvasStreamRef.current = callback}
             setClearCallback={(callback) => canvasClearRef.current = callback}
+            setSymmetryOriginMode={(callback) => setSymmetryOriginModeRef.current = callback}
+            onChangeActiveColor={setActiveColorIndex}
             cursorUrl={cursorUrl}
             isDemoMode={isWelcomeScreenVisible}
             onDemoEnd={handleDemoEnd}

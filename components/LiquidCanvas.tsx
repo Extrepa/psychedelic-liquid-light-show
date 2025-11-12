@@ -182,6 +182,9 @@ const Canvas2DFluid = (canvas: HTMLCanvasElement, initialConfig: LiquidConfig, o
 import type { Preset } from '../constants/presets';
 import { nextIndex, type CycleMode } from '../features/presets/PresetCycleEngine';
 import { generateBrushPattern, sampleStampImage } from '../utils/brushPatterns';
+import { getEasing, lerp } from '../utils/easing';
+import { getSymmetryPoints, isSymmetryActive, type Point } from '../utils/symmetry';
+import { ColorContextMenu } from './ColorContextMenu';
 
 interface LiquidCanvasProps {
   config: LiquidConfig;
@@ -201,9 +204,13 @@ interface LiquidCanvasProps {
   presets?: Preset[];
   onCommitConfig?: (cfg: Partial<LiquidConfig>) => void;
   performanceMode?: boolean;
+  // Symmetry origin setter
+  setSymmetryOriginMode?: (callback: (enabled: boolean) => void) => void;
+  updateConfig: (cfg: Partial<LiquidConfig>) => void;
+  onChangeActiveColor?: (index: number) => void;
 }
 
-export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, activeColorIndex, setGetDataUrlCallback, setGetStreamCallback, setClearCallback, cursorUrl, isDemoMode, onDemoEnd, cycleEnabled = false, cycleMode = 'sequential', cycleCadence = 'per-stroke', selectedPresets = [], presets = [], onCommitConfig, performanceMode }) => {
+export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, activeColorIndex, setGetDataUrlCallback, setGetStreamCallback, setClearCallback, cursorUrl, isDemoMode, onDemoEnd, cycleEnabled = false, cycleMode = 'sequential', cycleCadence = 'per-stroke', selectedPresets = [], presets = [], onCommitConfig, performanceMode, setSymmetryOriginMode, updateConfig, onChangeActiveColor }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<LiquidRenderer | null>(null);
@@ -211,6 +218,29 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
   // Temporarily disable WebGL while fixing PIXI v8 shader issues
   const [useWebGL, setUseWebGL] = useState<boolean>(false); // Was: supportsWebGL()
   const isPointerDownRef = useRef(false);
+  
+  // Dropper mode state
+  const pointerDownAtRef = useRef<number | null>(null);
+  const pointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
+  const lastPointerPosRef = useRef<{ x: number; y: number } | null>(null);
+  const previewRadiusRef = useRef<number>(0);
+  const dripTimerRef = useRef<number | null>(null);
+  const [previewCircle, setPreviewCircle] = useState<{ x: number; y: number; radius: number } | null>(null);
+  
+  // Symmetry origin setting mode
+  const [settingSymmetryOrigin, setSettingSymmetryOrigin] = useState(false);
+  
+  // Color context menu
+  const [colorMenuPos, setColorMenuPos] = useState<{ x: number; y: number } | null>(null);
+  
+  // Drop cancellation - max hold time (2.5 seconds)
+  const MAX_DROP_HOLD_MS = 2500;
+
+  // Parallax yaw (rotateY) in degrees
+  const [parallaxYaw, setParallaxYaw] = useState(0);
+  
+  // Wheel cooldown for phase switching
+  const lastPhaseSwitchAtRef = useRef(0);
   
   // Store config in a ref to avoid re-creating callbacks on every config change for performance
   const configRef = useRef(config);
@@ -356,8 +386,13 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
       };
       setClearCallback(clear);
     }
+    
+    // Symmetry origin mode callback
+    if (setSymmetryOriginMode) {
+      setSymmetryOriginMode(setSettingSymmetryOrigin);
+    }
 
-  }, [setGetDataUrlCallback, setGetStreamCallback, setClearCallback, useWebGL]);
+  }, [setGetDataUrlCallback, setGetStreamCallback, setClearCallback, setSymmetryOriginMode, useWebGL]);
 
   // Preset cycle internal state (per stroke)
   const cycleStateRef = useRef<{ active: boolean; state: { current: number; dir: 1 | -1 }; lastApplied?: Partial<LiquidConfig> } | null>(null);
@@ -462,11 +497,103 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
     lastSplatPosRef.current = { x, y };
   }, [applyEphemeralPreset, cycleCadence, cycleMode, presets, selectedPresets]);
   
+  // Preview circle animation
+  useEffect(() => {
+    if (!configRef.current.dropperEnabled || !pointerDownAtRef.current || !lastPointerPosRef.current) {
+      setPreviewCircle(null);
+      return;
+    }
+    
+    if (!configRef.current.dropPreview) return;
+    
+    let rafId: number;
+    const animate = () => {
+      if (!pointerDownAtRef.current || !lastPointerPosRef.current) {
+        setPreviewCircle(null);
+        return;
+      }
+      
+      const now = performance.now();
+      const heldMs = now - pointerDownAtRef.current;
+      const timeToMax = configRef.current.dropTimeToMaxMs || 1200;
+      const progress = Math.min(heldMs / timeToMax, 1);
+      const easingFn = getEasing(configRef.current.dropEasing || 'ease-out');
+      const eased = easingFn(progress);
+      
+      const minR = configRef.current.dropMinRadius || 0.01;
+      const maxR = configRef.current.dropMaxRadius || 0.15;
+      const canvasWidth = containerRef.current?.clientWidth || 800;
+      const radiusPx = lerp(minR * canvasWidth, maxR * canvasWidth, eased);
+      
+      previewRadiusRef.current = radiusPx;
+      setPreviewCircle({
+        x: lastPointerPosRef.current.x,
+        y: lastPointerPosRef.current.y,
+        radius: radiusPx,
+      });
+      
+      rafId = requestAnimationFrame(animate);
+    };
+    
+    animate();
+    return () => cancelAnimationFrame(rafId);
+  }, [pointerDownAtRef.current, lastPointerPosRef.current]);
+  
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-      isPointerDownRef.current = true;
-
+    if (isDemoModeRef.current) return;
+    
+    // Prevent default context menu
+    if (e.button === 2) {
+      e.preventDefault();
+      return;
+    }
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const currentConfig = configRef.current;
+    
+    // Symmetry origin setting mode
+    if (settingSymmetryOrigin) {
+      const canvasWidth = rect.width;
+      const canvasHeight = rect.height;
+      const normalizedX = x / canvasWidth;
+      const normalizedY = y / canvasHeight;
+      updateConfig({ symmetryOrigin: { x: normalizedX, y: normalizedY } });
+      setSettingSymmetryOrigin(false);
+      return;
+    }
+    
+    isPointerDownRef.current = true;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    
+    // Dropper mode (main interaction)
+    if (currentConfig.dropperEnabled && !currentConfig.lineEnabled && !currentConfig.dripEnabled) {
+      pointerDownAtRef.current = performance.now();
+      pointerDownPosRef.current = { x, y };
+      lastPointerPosRef.current = { x, y };
+      // Don't splat yet - wait for release
+      return;
+    }
+    
+    // Drip mode
+    if (currentConfig.dripEnabled) {
+      lastPointerPosRef.current = { x, y };
+      const interval = currentConfig.dripIntervalMs || 140;
+      dripTimerRef.current = window.setInterval(() => {
+        if (!lastPointerPosRef.current) return;
+        const minR = currentConfig.dropMinRadius || 0.01;
+        const canvasWidth = containerRef.current?.clientWidth || 800;
+        const radiusPx = minR * canvasWidth;
+        performSplat(lastPointerPosRef.current.x, lastPointerPosRef.current.y, radiusPx);
+      }, interval);
+      return;
+    }
+    
+    // Line mode (existing continuous behavior)
+    if (currentConfig.lineEnabled) {
       // Begin cycling for this stroke if enabled
-      if (!isDemoModeRef.current && cycleEnabled && selectedPresets.length > 0 && presets.length > 0) {
+      if (cycleEnabled && selectedPresets.length > 0 && presets.length > 0) {
         cycleStateRef.current = { active: true, state: { current: 0, dir: 1 } };
         if (cycleCadence === 'per-stroke') {
           const preset = presets[selectedPresets[0]];
@@ -476,43 +603,296 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
       } else {
         cycleStateRef.current = null;
       }
-
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
       splat(x, y);
-  }, [applyEphemeralPreset, cycleCadence, cycleEnabled, cycleMode, presets, selectedPresets, splat]);
-
-  const handlePointerUp = useCallback(() => {
-    isPointerDownRef.current = false;
-    // Commit final applied preset to history (single entry per stroke)
-    if (cycleStateRef.current?.active && cycleStateRef.current.lastApplied && onCommitConfig) {
-      onCommitConfig(cycleStateRef.current.lastApplied);
     }
-    cycleStateRef.current = null;
-    // Notify HUD end
-    // @ts-expect-error optional callback at runtime
-    window.__onCycleEnd && window.__onCycleEnd();
-  }, [onCommitConfig]);
+  }, [applyEphemeralPreset, cycleCadence, cycleEnabled, cycleMode, presets, selectedPresets, settingSymmetryOrigin, splat, updateConfig]);
+  
+  const performSplat = useCallback((x: number, y: number, radiusPx: number) => {
+    const currentConfig = configRef.current;
+    const canvasWidth = containerRef.current?.clientWidth || 800;
+    const canvasHeight = containerRef.current?.clientHeight || 600;
+    
+    // Get color
+    const currentActiveColorIndex = activeColorIndexRef.current;
+    const phase = currentConfig.activePhase || 'oil';
+    const palette = phase === 'oil' ? (currentConfig.oilPalette || currentConfig.colors) : (currentConfig.waterPalette || currentConfig.colors);
+    const color = palette[currentActiveColorIndex] || palette[0] || '#ff0000';
+    
+    // Convert to normalized coordinates
+    const normalizedX = x / canvasWidth;
+    const normalizedY = y / canvasHeight;
+    
+    // Apply symmetry if enabled
+    let points: Point[];
+    if (isSymmetryActive(currentConfig)) {
+      const origin = currentConfig.symmetryOrigin || { x: 0.5, y: 0.5 };
+      points = getSymmetryPoints(
+        { x: normalizedX, y: normalizedY },
+        {
+          origin,
+          count: currentConfig.symmetryCount || 6,
+          mirror: currentConfig.symmetryMirror !== false,
+          rotationDeg: currentConfig.symmetryRotationDeg || 0,
+        }
+      );
+    } else {
+      points = [{ x: normalizedX, y: normalizedY }];
+    }
+    
+    // Splat at each symmetric point
+    points.forEach(point => {
+      const px = point.x * canvasWidth;
+      const py = point.y * canvasHeight;
+      
+      if (rendererRef.current) {
+        rendererRef.current.splat(px, py, radiusPx, color, phase);
+      } else if (fallbackFluidRef.current) {
+        fallbackFluidRef.current.splat(px, py, radiusPx, color);
+      }
+
+      // Edge runoff: if near edges, spawn a drip
+      if (configRef.current.edgeRunoffEnabled) {
+        const margin = 0.02; // 2% near edge
+        if (point.x < margin) spawnRunoff('left', py, color);
+        else if (point.x > 1 - margin) spawnRunoff('right', py, color);
+        else if (point.y < margin) spawnRunoff('top', px, color);
+        else if (point.y > 1 - margin) spawnRunoff('bottom', px, color);
+      }
+    });
+
+    // Notify for flicker
+    (window as any).__onSplat && (window as any).__onSplat();
+  }, []);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPointerDownRef.current) return;
+    
+    const currentConfig = configRef.current;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    
+    // Dropper mode - commit the drop
+    if (currentConfig.dropperEnabled && !currentConfig.lineEnabled && !currentConfig.dripEnabled && pointerDownAtRef.current) {
+      const now = performance.now();
+      const heldMs = now - pointerDownAtRef.current;
+      
+      // Cancel if held too long
+      if (heldMs > MAX_DROP_HOLD_MS) {
+        pointerDownAtRef.current = null;
+        pointerDownPosRef.current = null;
+        lastPointerPosRef.current = null;
+        setPreviewCircle(null);
+        isPointerDownRef.current = false;
+        return;
+      }
+      
+      const timeToMax = currentConfig.dropTimeToMaxMs || 1200;
+      const progress = Math.min(heldMs / timeToMax, 1);
+      const easingFn = getEasing(currentConfig.dropEasing || 'ease-out');
+      const eased = easingFn(progress);
+      
+      const minR = currentConfig.dropMinRadius || 0.01;
+      const maxR = currentConfig.dropMaxRadius || 0.15;
+      const canvasWidth = containerRef.current?.clientWidth || 800;
+      const radiusPx = lerp(minR * canvasWidth, maxR * canvasWidth, eased);
+      
+      // Use release position
+      if (lastPointerPosRef.current) {
+        performSplat(lastPointerPosRef.current.x, lastPointerPosRef.current.y, radiusPx);
+      }
+      
+      // Clear preview
+      pointerDownAtRef.current = null;
+      pointerDownPosRef.current = null;
+      lastPointerPosRef.current = null;
+      setPreviewCircle(null);
+    }
+    
+    // Drip mode - clear timer
+    if (dripTimerRef.current) {
+      clearInterval(dripTimerRef.current);
+      dripTimerRef.current = null;
+    }
+    
+    // Line mode - commit preset cycle
+    if (currentConfig.lineEnabled) {
+      if (cycleStateRef.current?.active && cycleStateRef.current.lastApplied && onCommitConfig) {
+        onCommitConfig(cycleStateRef.current.lastApplied);
+      }
+      cycleStateRef.current = null;
+      // @ts-expect-error optional callback at runtime
+      window.__onCycleEnd && window.__onCycleEnd();
+    }
+    
+    isPointerDownRef.current = false;
+  }, [onCommitConfig, performSplat]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    if (isPointerDownRef.current) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    // Check if pointer moved off screen (cancel dropper)
+    const isOffScreen = x < 0 || y < 0 || x > rect.width || y > rect.height;
+    if (isOffScreen && pointerDownAtRef.current) {
+      // Cancel dropper
+      pointerDownAtRef.current = null;
+      pointerDownPosRef.current = null;
+      lastPointerPosRef.current = null;
+      setPreviewCircle(null);
+      isPointerDownRef.current = false;
+      return;
+    }
+    
+    // Update last position for all modes
+    lastPointerPosRef.current = { x, y };
+    
+    if (!isPointerDownRef.current) return;
+    
+    const currentConfig = configRef.current;
+    
+    // Line mode - continuous splat
+    if (currentConfig.lineEnabled) {
       splat(x, y);
     }
-  }, [splat]);
+    
+    // Parallax yaw (gentle rotateY based on cursor X)
+    const cfg = configRef.current;
+    if (cfg.sceneParallaxEnabled) {
+      const nx = (x / rect.width) * 2 - 1; // -1..1
+      const maxYaw = (cfg.sceneParallaxAmount ?? 0.5) * 6; // up to ~6deg
+      setParallaxYaw(nx * maxYaw);
+    } else if (parallaxYaw !== 0) {
+      setParallaxYaw(0);
+    }
+    
+    // Dropper and drip modes update position but don't splat on move
+  }, [parallaxYaw, splat]);
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (dripTimerRef.current) {
+        clearInterval(dripTimerRef.current);
+      }
+    };
+  }, []);
+  
+  // Keyboard shortcut: ESC to exit symmetry origin mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && settingSymmetryOrigin) {
+        setSettingSymmetryOrigin(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [settingSymmetryOrigin]);
+  
+  // Right-click handler for color picker
+  const handleContextMenu = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setColorMenuPos({ x: e.clientX, y: e.clientY });
+  }, []);
+  
+  const handleColorSelect = useCallback((color: string) => {
+    // Add color to palette if not present
+    const currentColors = configRef.current.colors;
+    let newIndex = currentColors.indexOf(color);
+    if (newIndex === -1) {
+      updateConfig({ colors: [...currentColors, color] });
+      newIndex = currentColors.length;
+    }
+    activeColorIndexRef.current = newIndex;
+    onChangeActiveColor?.(newIndex);
+  }, [onChangeActiveColor, updateConfig]);
+  
+  // Edge runoff model
+  type Runoff = { id: number; side: 'left' | 'right' | 'top' | 'bottom'; pos: number; color: string; startedAt: number };
+  const [runoffs, setRunoffs] = useState<Runoff[]>([]);
+  const runoffIdRef = useRef(0);
+
+  const spawnRunoff = (side: Runoff['side'], posPx: number, color: string) => {
+    const id = runoffIdRef.current++;
+    setRunoffs(r => [...r, { id, side, pos: posPx, color, startedAt: performance.now() }]);
+  };
+
+  useEffect(() => {
+    let raf: number;
+    const tick = () => {
+      const now = performance.now();
+      // Remove runoffs older than 2.5s
+      setRunoffs(items => items.filter(it => now - it.startedAt < 2500));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const renderRunoff = (r: Runoff) => {
+    if (!containerRef.current) return null;
+    const w = containerRef.current.clientWidth;
+    const h = containerRef.current.clientHeight;
+    const t = Math.min(1, (performance.now() - r.startedAt) / 2500);
+    const lengthScale = configRef.current.edgeRunoffLengthScale ?? 0.6;
+    const length = h * lengthScale * t; // grows
+    const thickness = (configRef.current.edgeRunoffThicknessPx ?? 4);
+    const opacity = 0.6 * (1 - t);
+
+    const common: React.CSSProperties = { position: 'absolute', opacity, pointerEvents: 'none' };
+    const grad = `linear-gradient(${r.side === 'left' || r.side === 'right' ? 'to bottom' : 'to right'}, ${r.color}, rgba(255,255,255,0))`;
+
+    if (r.side === 'left') return <div key={r.id} style={{ ...common, left: 0, top: r.pos - length / 2, width: thickness, height: length, background: grad }} />;
+    if (r.side === 'right') return <div key={r.id} style={{ ...common, right: 0, top: r.pos - length / 2, width: thickness, height: length, background: grad }} />;
+    if (r.side === 'top') return <div key={r.id} style={{ ...common, top: 0, left: r.pos - length / 2, height: thickness, width: length, background: grad }} />;
+    return <div key={r.id} style={{ ...common, bottom: 0, left: r.pos - length / 2, height: thickness, width: length, background: grad }} />;
+  };
+
+  // Wheel to switch phase or colors
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    if (isDemoModeRef.current) return;
+    if (settingSymmetryOrigin) return;
+
+    const dy = e.deltaY;
+    // CMD/Meta scroll cycles colors
+    if (e.metaKey) {
+      e.preventDefault();
+      const dir = dy > 0 ? 1 : -1;
+      const colors = configRef.current.colors;
+      if (!colors.length) return;
+      let idx = (activeColorIndexRef.current + dir + colors.length) % colors.length;
+      activeColorIndexRef.current = idx;
+      onChangeActiveColor?.(idx);
+      return;
+    }
+
+    // Plain scroll toggles oil/water with cooldown
+    const now = performance.now();
+    if (now - lastPhaseSwitchAtRef.current < 200) return;
+    lastPhaseSwitchAtRef.current = now;
+    e.preventDefault();
+    const next = (configRef.current.activePhase || 'oil') === 'oil' ? 'water' : 'oil';
+    updateConfig({ activePhase: next });
+  }, [onChangeActiveColor, settingSymmetryOrigin, updateConfig]);
+  
   return (
     <div
       ref={containerRef}
       className="absolute inset-0 w-full h-full"
-      style={{ cursor: cursorUrl ? `url(${cursorUrl}) 16 16, crosshair` : 'crosshair' }}
+      style={{ 
+        cursor: settingSymmetryOrigin 
+          ? 'crosshair' 
+          : (cursorUrl ? `url(${cursorUrl}) 16 16, crosshair` : 'crosshair'),
+        // Add subtle 3D perspective - viewing from slight angle + parallax yaw
+        transform: `perspective(2000px) rotateX(7deg) rotateY(${parallaxYaw}deg)`,
+        transformStyle: 'preserve-3d',
+      }}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       onPointerMove={handlePointerMove}
+      onContextMenu={handleContextMenu}
+      onWheel={handleWheel}
     >
       {/* Canvas2D fallback */}
       {!useWebGL && (
@@ -522,6 +902,82 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
         />
       )}
       {/* WebGL renderer will append its own canvas to containerRef */}
+      
+      {/* Edge runoff overlays */}
+      {runoffs.map(renderRunoff)}
+      
+      {/* Preview circle overlay - red transparent with grid lines */}
+      {previewCircle && (
+        <div
+          className="absolute rounded-full pointer-events-none transition-all duration-75"
+          style={{
+            left: previewCircle.x - previewCircle.radius,
+            top: previewCircle.y - previewCircle.radius,
+            width: previewCircle.radius * 2,
+            height: previewCircle.radius * 2,
+            backgroundImage: `radial-gradient(circle, rgba(255,0,0,0.12), rgba(255,0,0,0.08)),
+                              repeating-linear-gradient(0deg, rgba(255,0,0,0.25) 0 1px, rgba(255,0,0,0) 1px 10px),
+                              repeating-linear-gradient(90deg, rgba(255,0,0,0.25) 0 1px, rgba(255,0,0,0) 1px 10px)`,
+            border: '2px solid rgba(255,0,0,0.55)',
+            boxShadow: `0 0 ${previewCircle.radius * 0.25}px rgba(255,0,0,0.45), inset 0 0 ${previewCircle.radius * 0.15}px rgba(255,0,0,0.25)`,
+            opacity: 0.9,
+          }}
+        />
+      )}
+
+      {/* Dropper art overlay (follows cursor) */}
+      {configRef.current.dropperCursorEnabled && configRef.current.dropperCursorUrl && lastPointerPosRef.current && (
+        <img
+          src={configRef.current.dropperCursorUrl}
+          alt="dropper"
+          className="absolute pointer-events-none select-none"
+          style={{
+            left: lastPointerPosRef.current.x - (configRef.current.dropperCursorTipOffsetX ?? ((configRef.current.dropperCursorSizePx ?? 42) * 0.25)),
+            top: lastPointerPosRef.current.y - (configRef.current.dropperCursorTipOffsetY ?? ((configRef.current.dropperCursorSizePx ?? 42) * 0.75)),
+            width: (configRef.current.dropperCursorSizePx ?? 42),
+            height: 'auto',
+            opacity: 0.95,
+            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.45))',
+            transform: `rotate(${configRef.current.dropperCursorRotationDeg ?? -8}deg)`,
+          }}
+        />
+      )}
+      
+      {/* Symmetry origin crosshair */}
+      {configRef.current.symmetryEnabled && configRef.current.symmetryOrigin && containerRef.current && (
+        <div
+          className="absolute w-4 h-4 pointer-events-none"
+          style={{
+            left: (configRef.current.symmetryOrigin.x * containerRef.current.clientWidth) - 8,
+            top: (configRef.current.symmetryOrigin.y * containerRef.current.clientHeight) - 8,
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" className="drop-shadow-md">
+            <line x1="8" y1="0" x2="8" y2="16" stroke="white" strokeWidth="1.5" />
+            <line x1="0" y1="8" x2="16" y2="8" stroke="white" strokeWidth="1.5" />
+            <circle cx="8" cy="8" r="3" fill="none" stroke="white" strokeWidth="1.5" />
+          </svg>
+        </div>
+      )}
+      
+      {/* Symmetry origin setting mode overlay */}
+      {settingSymmetryOrigin && (
+        <div className="absolute inset-0 bg-black/20 pointer-events-none flex items-center justify-center">
+          <div className="bg-gray-900/90 text-white px-4 py-2 rounded-lg text-sm">
+            Click to set symmetry origin • Press ESC to cancel
+          </div>
+        </div>
+      )}
+      
+      {/* Color context menu */}
+      {colorMenuPos && (
+        <ColorContextMenu
+          x={colorMenuPos.x}
+          y={colorMenuPos.y}
+          onColorSelect={handleColorSelect}
+          onClose={() => setColorMenuPos(null)}
+        />
+      )}
     </div>
   );
 };

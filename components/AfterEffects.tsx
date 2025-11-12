@@ -19,7 +19,47 @@ const NoiseOverlay: React.FC<{ intensity: number }> = ({ intensity }) => (
 
 export const AfterEffects: React.FC<AfterEffectsProps> = ({ config, children }) => {
     const { chromaticAberration, grain, bloom } = config;
+    const brightness = config.sceneBrightness ?? 1.0;
+
+    // Resize flash and splat flicker state
+    const [flashAlpha, setFlashAlpha] = React.useState(0);
+    const [flickerAlpha, setFlickerAlpha] = React.useState(0);
+
+    React.useEffect(() => {
+        const onResize = () => {
+            if (!config.flashOnResize) return;
+            setFlashAlpha(prev => Math.max(prev, config.flashIntensity ?? 0.15));
+        };
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, [config.flashOnResize, config.flashIntensity]);
+
+    React.useEffect(() => {
+        // Hook into splat events for flicker
+        (window as any).__onSplat = () => {
+            if (!config.flickerEnabled) return;
+            setFlickerAlpha(prev => Math.max(prev, config.flickerIntensity ?? 0.2));
+        };
+        return () => {
+            delete (window as any).__onSplat;
+        };
+    }, [config.flickerEnabled, config.flickerIntensity]);
+
+    React.useEffect(() => {
+        let raf: number;
+        const animate = () => {
+            // Exponential decay for flash and flicker
+            const decay = (value: number, rate: number) => Math.max(0, value - rate);
+            setFlashAlpha(a => decay(a, (config.flashIntensity ?? 0.15) / ((config.flashDurationMs ?? 300) / 60)));
+            setFlickerAlpha(a => decay(a, 0.06 + Math.random() * 0.08));
+            raf = requestAnimationFrame(animate);
+        };
+        raf = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(raf);
+    }, [config.flashIntensity, config.flashDurationMs]);
     
+    const overlayAlpha = Math.max(0, Math.min(1, flashAlpha + flickerAlpha));
+
     return (
         <div className="relative w-full h-full">
             <svg width="0" height="0" style={{ position: 'absolute' }}>
@@ -62,14 +102,27 @@ export const AfterEffects: React.FC<AfterEffectsProps> = ({ config, children }) 
                 className="w-full h-full" 
                 style={{ 
                     filter: [
+                        `brightness(${brightness})`,
                         bloom > 0 ? 'url(#bloom-effect)' : '',
                         chromaticAberration > 0 ? 'url(#chromatic-aberration)' : ''
-                    ].filter(Boolean).join(' ') || 'none'
+                    ].filter(Boolean).join(' ')
                 }}
             >
                 {children}
             </div>
             {grain > 0 && <NoiseOverlay intensity={grain} />}
+            {/* Light overlay for flash/flicker */}
+            {overlayAlpha > 0 && (
+                <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{
+                        background: 'radial-gradient(circle at 40% 40%, rgba(255,255,255,1), rgba(255,255,255,0))',
+                        mixBlendMode: 'screen' as any,
+                        opacity: overlayAlpha,
+                        transition: 'opacity 60ms linear',
+                    }}
+                />
+            )}
         </div>
     );
 };

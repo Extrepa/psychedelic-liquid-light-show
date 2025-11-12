@@ -15,7 +15,7 @@ import { HomeIcon } from '../../components/icons/HomeIcon';
 import { GearIcon } from '../../components/icons/GearIcon';
 import { GridIcon } from '../../components/icons/GridIcon';
 
-export type Tab = 'simulation' | 'colors' | 'effects' | 'brush' | 'settings';
+export type Tab = 'simulation' | 'colors' | 'effects' | 'brush' | 'presets' | 'settings';
 
 interface AppBarProps {
   activePanel: Tab | null;
@@ -38,6 +38,7 @@ const TABS: { id: Tab, label: string, icon: React.FC<React.SVGProps<SVGSVGElemen
   { id: 'colors', label: 'Colors', icon: PaletteIcon },
   { id: 'effects', label: 'Effects', icon: WandIcon },
   { id: 'brush', label: 'Brush', icon: PaintbrushIcon },
+  { id: 'presets', label: 'Presets', icon: PaletteIcon },
   { id: 'settings', label: 'Settings', icon: GearIcon },
 ];
 
