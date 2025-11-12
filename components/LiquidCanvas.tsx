@@ -232,6 +232,8 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
   
   // Color context menu
   const [colorMenuPos, setColorMenuPos] = useState<{ x: number; y: number } | null>(null);
+  const colorMenuOpenRef = useRef(false);
+  useEffect(() => { colorMenuOpenRef.current = !!colorMenuPos; }, [colorMenuPos]);
   
   // Drop cancellation - max hold time (2.5 seconds)
   const MAX_DROP_HOLD_MS = 2500;
@@ -543,6 +545,8 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
   
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (isDemoModeRef.current) return;
+    // If the color menu is open, ignore canvas clicks
+    if (colorMenuOpenRef.current) return;
     
     // Prevent default context menu
     if (e.button === 2) {
@@ -667,6 +671,7 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
   }, []);
 
   const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (colorMenuOpenRef.current) return;
     if (!isPointerDownRef.current) return;
     
     const currentConfig = configRef.current;
@@ -729,6 +734,7 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
   }, [onCommitConfig, performSplat]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (colorMenuOpenRef.current) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -992,12 +998,16 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
       
       {/* Color context menu */}
       {colorMenuPos && (
-        <ColorContextMenu
-          x={colorMenuPos.x}
-          y={colorMenuPos.y}
-          onColorSelect={handleColorSelect}
-          onClose={() => setColorMenuPos(null)}
-        />
+        <>
+          {/* Modal shield to disable canvas clicks while picking color */}
+          <div className="absolute inset-0 z-[4999]" style={{ cursor: 'default' }} />
+          <ColorContextMenu
+            x={colorMenuPos.x}
+            y={colorMenuPos.y}
+            onColorSelect={(c)=>{ handleColorSelect(c); setColorMenuPos(null); }}
+            onClose={() => setColorMenuPos(null)}
+          />
+        </>
       )}
     </div>
   );
