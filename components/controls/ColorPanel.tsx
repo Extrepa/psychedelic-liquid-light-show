@@ -136,7 +136,7 @@ export const ColorPanel: React.FC<ColorPanelProps> = ({ config, updateConfig, on
               <div className="relative group">
                 <button
                   onClick={() => setActiveColorIndex(index)}
-                  className={`w-8 h-8 rounded-full cursor-pointer appearance-none border-2 ${activeColorIndex === index ? 'border-purple-500 ring-2 ring-purple-500' : 'border-gray-600'} hover:border-purple-400 transition-all`}
+                  className={`w-6 h-6 rounded-full cursor-pointer appearance-none border ${activeColorIndex === index ? 'border-purple-500 ring-2 ring-purple-500' : 'border-gray-600'} hover:border-purple-400 transition-all`}
                   style={{ backgroundColor: color }}
                   aria-label={`Select Color ${index + 1}: ${color}`}
                 />
@@ -151,13 +151,13 @@ export const ColorPanel: React.FC<ColorPanelProps> = ({ config, updateConfig, on
             </Tooltip>
           ))}
           <Tooltip text="Add new color">
-            <button onClick={handleAddColor} className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-400 flex items-center justify-center">
-              <PlusIcon className="w-5 h-5" />
+            <button onClick={handleAddColor} className="w-6 h-6 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-400 flex items-center justify-center">
+              <PlusIcon className="w-4 h-4" />
             </button>
           </Tooltip>
           <Tooltip text="Shuffle colors">
-            <button onClick={shuffleColors} className="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-400 flex items-center justify-center">
-              <ShuffleIcon className="w-5 h-5" />
+            <button onClick={shuffleColors} className="w-6 h-6 rounded-full bg-gray-700 hover:bg-gray-600 text-gray-400 flex items-center justify-center">
+              <ShuffleIcon className="w-4 h-4" />
             </button>
           </Tooltip>
         </div>

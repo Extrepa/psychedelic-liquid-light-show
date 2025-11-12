@@ -30,6 +30,7 @@ import { DEFAULT_CONFIG } from './constants';
 import { RestorePrompt } from './components/RestorePrompt';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { ShortcutsModal } from './components/ShortcutsModal';
+import { OnboardingHint } from './components/OnboardingHint';
 import { GestureControls } from './components/GestureControls';
 import { ShakeToClear } from './components/ShakeToClear';
 // New hooks
@@ -220,8 +221,10 @@ function App() {
     startRecording({ getStream: () => getCanvasStreamRef.current!(), durationSec: duration, bitrate: quality });
   };
   
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const handleBegin = () => {
     setIsWelcomeScreenVisible(false);
+    setShowOnboarding(true);
   };
 
   const handleDemoEnd = useCallback(() => {
@@ -279,7 +282,7 @@ function App() {
       backgroundImage: 'url(/images/subtle-bg.png)',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
-      backgroundColor: '#0f1419'
+      backgroundColor: 'transparent'
     }}>
       <BackgroundGradient />
       <Toast toast={toast} onClose={() => setToast(null)} />
@@ -288,6 +291,7 @@ function App() {
       <MiniHUD visible={hudVisible && cycleEnabled && selectedPresets.length > 0} presetName={hudPreset} mode={cycleMode} cadence={cadence} />
       {showRestorePrompt && <RestorePrompt onRestore={handleRestore} onDismiss={handleDismiss} />}
       {isWelcomeScreenVisible && <WelcomeScreen onBegin={handleBegin} />}
+      {!isWelcomeScreenVisible && <OnboardingHint isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />}
 
       {!isWelcomeScreenVisible && isTopPanelEnabled() && (
         <>
@@ -370,7 +374,14 @@ function App() {
 
       <main className="flex-1 relative">
         {!isWelcomeScreenVisible && <Dropper config={config} updateConfig={updateConfigWithColorGuard} />}
-        {!isWelcomeScreenVisible && <BackgroundPattern config={config} />}
+      {!isWelcomeScreenVisible && <BackgroundPattern config={config} />}
+        {/* Grid overlay */}
+        {!isWelcomeScreenVisible && isGridVisible && (
+          <div className="pointer-events-none absolute inset-0 z-10" style={{
+            backgroundImage: `repeating-linear-gradient(0deg, rgba(255,255,255,0.15) 0 1px, transparent 1px 16px), repeating-linear-gradient(90deg, rgba(255,255,255,0.15) 0 1px, transparent 1px 16px)`,
+            mixBlendMode: 'overlay'
+          }} />
+        )}
         <AfterEffects config={config}>
           <LiquidCanvas
             config={config}
