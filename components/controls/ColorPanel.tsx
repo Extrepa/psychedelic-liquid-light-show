@@ -103,7 +103,7 @@ export const ColorPanel: React.FC<ColorPanelProps> = ({ config, updateConfig, on
            <Tooltip text="Click to open color picker">
             <button
               onClick={() => colorInputRef.current?.click()}
-              className="w-10 h-10 rounded-md border-2 border-gray-600 cursor-pointer"
+className="w-8 h-8 md:w-10 md:h-10 rounded-md border border-gray-600 md:border-2 cursor-pointer"
               style={{ backgroundColor: config.colors[activeColorIndex] || '#000000' }}
               aria-label="Open color picker for active color"
             />

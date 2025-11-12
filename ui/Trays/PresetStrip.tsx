@@ -23,7 +23,7 @@ export const PresetStrip: React.FC<PresetStripProps> = ({ onApply, selected, onT
   const visible = category === 'All' ? PRESETS : PRESETS.filter(p => p.category === category);
   return (
     <div className="fixed top-[4rem] left-4 z-38 pointer-events-none">
-      <div className="flex items-center gap-2 p-2 bg-gray-900/70 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-2xl pointer-events-auto max-w-[92vw] overflow-x-auto">
+      <div className="flex items-center gap-1.5 p-1.5 bg-gray-900/70 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl pointer-events-auto max-w-[92vw] overflow-x-auto md:gap-2 md:p-2">
         {/* Categories */}
         {cats.map(c => (
           <button key={c} onClick={() => setCategory(c)} className={`px-2 py-1 text-xs rounded-full border ${category===c ? 'bg-purple-600/40 text-white border-purple-500' : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'}`}>{c}</button>
@@ -47,7 +47,7 @@ onClick={(e) => {
                 if ((e.key === 'a' || e.key === 'A') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onToggleSelect(i); }
               }}
               tabIndex={0}
-              className={`px-3 py-1 text-sm rounded-full whitespace-nowrap border ${isSel ? 'bg-purple-600/40 text-white border-purple-500' : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'}`}
+className={`px-2 py-1 text-xs md:text-sm rounded-full whitespace-nowrap border ${isSel ? 'bg-purple-600/40 text-white border-purple-500' : 'bg-gray-700 text-gray-200 border-gray-600 hover:bg-gray-600'}`}
               title={p.name}
               aria-pressed={isSel}
             >

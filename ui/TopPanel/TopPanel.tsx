@@ -63,7 +63,7 @@ export const TopPanel: React.FC<TopPanelProps> = ({ isOpen, onClose, children, t
 
   return (
     <div
-      className={`fixed top-16 left-4 z-30 w-[min(92vw,880px)] ${prefersReduced ? '' : 'transition-transform duration-300 ease-in-out'} ${isOpen ? 'translate-y-0 opacity-100' : '-translate-y-6 opacity-0 pointer-events-none'}`}
+      className={`fixed top-12 left-2 md:top-16 md:left-4 z-30 w-[min(96vw,880px)] md:w-[min(92vw,880px)] ${prefersReduced ? '' : 'transition-transform duration-300 ease-in-out'} ${isOpen ? 'translate-y-0 opacity-100' : '-translate-y-6 opacity-0 pointer-events-none'}`}
       role="dialog"
       aria-modal="true"
       aria-hidden={!isOpen}
@@ -71,16 +71,16 @@ export const TopPanel: React.FC<TopPanelProps> = ({ isOpen, onClose, children, t
     >
       <div
         ref={panelRef}
-        className="bg-gray-900/80 backdrop-blur-md border border-gray-700/60 rounded-2xl p-4 shadow-2xl"
+        className="bg-gray-900/80 backdrop-blur-md border border-gray-700/60 rounded-xl p-2 md:p-4 shadow-2xl"
       >
-        <div className="flex justify-between items-center mb-3">
+        <div className="flex justify-between items-center mb-2 md:mb-3">
           {title && <h2 className="text-sm font-semibold text-white">{title}</h2>}
           <button
             onClick={onClose}
             className="p-1 text-gray-400 rounded-full hover:bg-gray-700 hover:text-white"
             aria-label="Close panel"
           >
-            <CloseIcon className="w-5 h-5" />
+            <CloseIcon className="w-4 h-4 md:w-5 md:h-5" />
           </button>
         </div>
         <div className="max-h-[60vh] overflow-y-auto pr-1">
