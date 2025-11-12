@@ -31,6 +31,7 @@ import { RestorePrompt } from './components/RestorePrompt';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { OnboardingHint } from './components/OnboardingHint';
+import { ControlDock } from './components/ControlDock';
 import { GestureControls } from './components/GestureControls';
 import { ShakeToClear } from './components/ShakeToClear';
 // New hooks
@@ -295,6 +296,7 @@ function App() {
 
       {!isWelcomeScreenVisible && isTopPanelEnabled() && (
         <>
+        {/* Original AppBar remains available; ControlDock consolidates controls and can be used instead */}
         <AppBar
           activePanel={activePanel}
           setActivePanel={setActivePanel}
@@ -383,6 +385,28 @@ function App() {
           }} />
         )}
         <AfterEffects config={config}>
+          {/* Floating control dock (movable) */}
+          {!isWelcomeScreenVisible && (
+            <ControlDock
+              config={config}
+              updateConfig={updateConfigWithColorGuard}
+              isPlaying={isPlaying}
+              onTogglePlay={() => setIsPlaying(p => !p)}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              onSave={handleOpenSaveModal}
+              onExport={() => setIsExportModalOpen(true)}
+              isRecording={isRecording}
+              isGridVisible={isGridVisible}
+              onToggleGrid={() => setIsGridVisible(v => !v)}
+              activeColorIndex={activeColorIndex}
+              setActiveColorIndex={setActiveColorIndex}
+              onGeneratePalette={handleGeneratePalette}
+              onGenerateVibe={handleGenerateVibe}
+              isGenerating={isGenerating}
+              onSetSymmetryOrigin={() => setSymmetryOriginModeRef.current?.(true)}
+            />
+          )}
           <LiquidCanvas
             config={config}
             updateConfig={updateConfigWithColorGuard}
