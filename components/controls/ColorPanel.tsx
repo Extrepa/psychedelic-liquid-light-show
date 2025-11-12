@@ -84,6 +84,20 @@ export const ColorPanel: React.FC<ColorPanelProps> = ({ config, updateConfig, on
     <div className="flex flex-col gap-4">
       
       <div>
+        <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Phase</h3>
+        <div className="flex gap-2">
+          <button
+            onClick={() => updateConfig({ activePhase: 'oil', colors: config.oilPalette || config.colors })}
+            className={`px-3 py-1 rounded-md text-sm ${config.activePhase==='oil' ? 'bg-purple-600/40 text-white border border-purple-500' : 'bg-gray-700 text-gray-200 border border-gray-600'}`}
+          >Oil</button>
+          <button
+            onClick={() => updateConfig({ activePhase: 'water', colors: config.waterPalette || config.colors })}
+            className={`px-3 py-1 rounded-md text-sm ${config.activePhase==='water' ? 'bg-purple-600/40 text-white border border-purple-500' : 'bg-gray-700 text-gray-200 border border-gray-600'}`}
+          >Water</button>
+        </div>
+      </div>
+
+      <div>
         <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Active Color</h3>
         <div className="flex items-center gap-2">
            <Tooltip text="Click to open color picker">

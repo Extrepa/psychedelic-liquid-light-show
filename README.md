@@ -37,9 +37,11 @@ https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6
 
 ## Overview
 
-This app recreates the mesmerizing art form of projecting oil, water, and food coloring through overhead projectors—a staple of psychedelic performances in the 1960s. Users can paint flowing, morphing blobs of color, tweak simulation physics, generate AI-powered palettes, apply post-processing effects, and record their creations.
+This app recreates the mesmerizing art form of projecting oil, water, and food coloring through overhead projectors—a staple of psychedelic performances in the 1960s. Now featuring **realistic two-phase fluid simulation** with oil floating above water, immiscible color mixing, buoyancy, surface tension, specular highlights, Fresnel reflections, refraction, and optional thin-film interference.
 
-Built with: React 19, TypeScript, Vite, Canvas2D, and Google Gemini AI.
+Users can paint flowing, morphing blobs of color, toggle between oil and water droppers, tweak realistic physics parameters, generate AI-powered palettes, apply post-processing effects, and record their creations.
+
+Built with: React 19, TypeScript, Vite, **PIXI.js v8 + WebGL shaders**, Canvas2D fallback, and Google Gemini AI.
 
 View in AI Studio: https://ai.studio/apps/drive/15tTC3EwsPv9lJAFVS8PWjoeYllbVW9aS
 
@@ -79,19 +81,23 @@ The built site will be in `dist/`.
 
 ## How to Use
 
-1. Welcome Screen: Click "OK" to start. You'll see an animated liquid demo.
-2. Paint: Click and drag to paint with the active color. Paint persists and mixes.
-3. Controls:
-   - Top-right dock: Play/Pause, Undo/Redo, Save, Gallery, Clear, Export, Menu
-   - Bottom dock: Quick color picker, Studio button, and minimize toggle
-   - Sidebar (Studio): Full controls for simulation, colors, effects, blending, and brush size
-4. AI Features:
+1. **Welcome Screen**: Click "OK" to start. You'll see an animated liquid demo.
+2. **Paint**: Click and drag to paint with the active phase (oil or water). Oil floats; water sinks.
+3. **Dropper Widget** (bottom-right): Toggle between Oil and Water droppers. See current phase palette.
+4. **Controls**:
+   - **Top-right dock**: Play/Pause, Undo/Redo, Save, Gallery, Clear, Export, Menu
+   - **Bottom dock**: Quick color picker, Studio button, and minimize toggle
+   - **Sidebar (Studio)**: Full controls for simulation, colors, effects, blending, and brush size
+     - **Simulation Panel**: Surface tension, oil/water density, gravity angle/strength, sim resolution
+     - **Effects Panel**: Gloss, refractive index, light angle/intensity, refraction, thin-film toggle
+     - **Color Panel**: Phase selector (Oil/Water), palette editor, AI generation
+5. **AI Features**:
    - Generate color palettes or full "vibes" (palette + simulation params) from text prompts
    - Example prompts: "Bioluminescent forest," "Cosmic soup," "Neon noir"
-5. Presets: Choose from 12 built-in palettes (Lava Lamp, Aurora Borealis, Ink Drop, etc.)
-6. Session Restore: If you navigate away, you'll be prompted to restore your session on return
-7. Gallery: Save artworks locally with thumbnails; reload configurations anytime
-8. Export Video: Record 5–30 second WebM videos at various quality levels
+6. **Presets**: Choose from 13 built-in palettes including **"Errl Day"** (golden oil + vibrant water)
+7. **Session Restore**: If you navigate away, you'll be prompted to restore your session on return
+8. **Gallery**: Save artworks locally with thumbnails; reload configurations anytime
+9. **Export Video**: Record 5–30 second WebM videos at various quality levels
 
 ---
 

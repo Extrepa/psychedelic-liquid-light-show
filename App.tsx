@@ -16,6 +16,7 @@ import { ColorPanel } from './components/controls/ColorPanel';
 import { EffectsPanel } from './components/controls/EffectsPanel';
 import { BrushPanel } from './components/controls/BrushPanel';
 import { BackgroundGradient } from './components/BackgroundGradient';
+import { Dropper } from './components/Dropper';
 import { SaveModal } from './components/SaveModal';
 import { GalleryModal } from './components/GalleryModal';
 import { ExportVideoModal } from './components/ExportVideoModal';
@@ -332,6 +333,7 @@ function App() {
       )}
 
       <main className="flex-1 relative">
+        {!isWelcomeScreenVisible && <Dropper config={config} updateConfig={updateConfigWithColorGuard} />}
         <AfterEffects config={config}>
           <LiquidCanvas
             config={config}

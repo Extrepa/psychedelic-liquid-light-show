@@ -48,7 +48,7 @@ const BLEND_MODES = [
 
 export const EffectsPanel: React.FC<EffectsPanelProps> = ({ config, updateConfig, isGridVisible, setIsGridVisible }) => {
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       <div>
         <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Blending</h3>
         <Tooltip text="How new colors interact with existing colors on the canvas.">
@@ -63,18 +63,49 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({ config, updateConfig
             </select>
         </Tooltip>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Tooltip text="Adds a soft, glowing halo around bright areas.">
-          <Slider label="Bloom" value={config.bloom} onChange={v => updateConfig({ bloom: v })} />
-        </Tooltip>
-        <Tooltip text="Casts radiating light rays from bright areas.">
-          <Slider label="Sunrays" value={config.sunrays} onChange={v => updateConfig({ sunrays: v })} />
-        </Tooltip>
-        <Tooltip text="Adds a retro color-fringing effect.">
-          <Slider label="Chromatic Aberration" value={config.chromaticAberration} onChange={v => updateConfig({ chromaticAberration: v }, false)} max={0.1} />
-        </Tooltip>
-        <Tooltip text="Applies a cinematic grain texture.">
-          <Slider label="Grain" value={config.grain} onChange={v => updateConfig({ grain: v }, false)} />
+      <div>
+        <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Post Effects</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Tooltip text="Adds a soft, glowing halo around bright areas.">
+            <Slider label="Bloom" value={config.bloom} onChange={v => updateConfig({ bloom: v })} />
+          </Tooltip>
+          <Tooltip text="Casts radiating light rays from bright areas.">
+            <Slider label="Sunrays" value={config.sunrays} onChange={v => updateConfig({ sunrays: v })} />
+          </Tooltip>
+          <Tooltip text="Adds a retro color-fringing effect.">
+            <Slider label="Chromatic Aberration" value={config.chromaticAberration} onChange={v => updateConfig({ chromaticAberration: v }, false)} max={0.1} />
+          </Tooltip>
+          <Tooltip text="Applies a cinematic grain texture.">
+            <Slider label="Grain" value={config.grain} onChange={v => updateConfig({ grain: v }, false)} />
+          </Tooltip>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Realistic Optics</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Tooltip text="Specular shininess. Higher = sharper highlights.">
+            <Slider label="Gloss" value={config.gloss ?? 0.75} onChange={v => updateConfig({ gloss: v })} />
+          </Tooltip>
+          <Tooltip text="Refractive index of oil (1.0–2.0). Affects light bending.">
+            <Slider label="Refractive Index" value={config.refractiveIndexOil ?? 1.45} onChange={v => updateConfig({ refractiveIndexOil: v })} min={1.0} max={2.0} step={0.01} />
+          </Tooltip>
+          <Tooltip text="Light angle in degrees (0–90).">
+            <Slider label="Light Angle" value={config.lightAngleDeg ?? 45} onChange={v => updateConfig({ lightAngleDeg: v })} min={0} max={90} step={1} />
+          </Tooltip>
+          <Tooltip text="Light intensity multiplier.">
+            <Slider label="Light Intensity" value={config.lightIntensity ?? 1.0} onChange={v => updateConfig({ lightIntensity: v })} min={0} max={2.0} />
+          </Tooltip>
+          <Tooltip text="Refraction distortion strength.">
+            <Slider label="Refraction Strength" value={config.refractionStrength ?? 0.6} onChange={v => updateConfig({ refractionStrength: v })} />
+          </Tooltip>
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Advanced</h3>
+        <Tooltip text="Enable iridescent thin-film shimmer on oil edges (GPU intensive).">
+          <Toggle label={<span>Thin-Film Interference</span>} checked={config.thinFilm ?? false} onChange={v => updateConfig({ thinFilm: v })} />
         </Tooltip>
       </div>
       <div>
