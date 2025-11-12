@@ -98,6 +98,12 @@ export const BrushPanel: React.FC<BrushPanelProps> = ({ config, updateConfig }) 
             onClick={() => updateConfig({ brushPattern: 'line' })}
           />
           <PatternButton
+            label="Spray Paint"
+            icon="💨"
+            active={currentPattern === 'spray'}
+            onClick={() => updateConfig({ brushPattern: 'spray' })}
+          />
+          <PatternButton
             label="Text"
             icon="Aa"
             active={currentPattern === 'text'}
@@ -163,6 +169,24 @@ export const BrushPanel: React.FC<BrushPanelProps> = ({ config, updateConfig }) 
           </div>
         </div>
       )}
+
+      {/* Eraser Mode Toggle */}
+      <div>
+        <h3 className="text-xs text-gray-300 uppercase font-semibold mb-3">Eraser Tool</h3>
+        <button
+          onClick={() => updateConfig({ eraserMode: !config.eraserMode })}
+          className={`w-full px-4 py-3 rounded-lg text-sm font-medium transition-all ${
+            config.eraserMode
+              ? 'bg-red-600 text-white shadow-lg'
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+          }`}
+        >
+          {config.eraserMode ? '🧹 Eraser Active' : '🖌️ Paint Mode'}
+        </button>
+        {config.eraserMode && (
+          <p className="text-xs text-gray-400 mt-2">Click and drag to remove particles</p>
+        )}
+      </div>
 
       {/* Hidden file input */}
       <input

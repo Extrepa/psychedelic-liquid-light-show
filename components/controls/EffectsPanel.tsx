@@ -82,6 +82,22 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({ config, updateConfig
       </div>
 
       <div>
+        <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Color Effects</h3>
+        <div className="grid grid-cols-1 gap-4">
+          <Tooltip text="Particles shift through the color spectrum as they age. 0 = no shift, 1 = full rainbow cycle.">
+            <Slider 
+              label="Hue Shift 🌈" 
+              value={config.hueShift ?? 0} 
+              onChange={v => updateConfig({ hueShift: v })} 
+              min={0}
+              max={1}
+              step={0.01}
+            />
+          </Tooltip>
+        </div>
+      </div>
+
+      <div>
         <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Realistic Optics</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Tooltip text="Specular shininess. Higher = sharper highlights.">

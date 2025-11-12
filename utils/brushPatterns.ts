@@ -71,6 +71,26 @@ export function generateBrushPattern(
       return [{ x, y, radius: baseRadius * 0.2 }];
     }
 
+    case 'spray': {
+      // Spray paint - lots of small random particles
+      const points: SplatPoint[] = [];
+      const sprayCount = 8 + Math.floor(Math.random() * 5);
+      const sprayRadius = baseRadius * 2;
+      
+      for (let i = 0; i < sprayCount; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = Math.random() * sprayRadius;
+        const size = baseRadius * (0.1 + Math.random() * 0.3);
+        
+        points.push({
+          x: x + Math.cos(angle) * distance,
+          y: y + Math.sin(angle) * distance,
+          radius: size,
+        });
+      }
+      return points;
+    }
+
     case 'text': {
       // Render text along the path (simplified - just place text at point)
       // In a real implementation, this would need proper text rendering

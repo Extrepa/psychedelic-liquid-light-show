@@ -18,12 +18,19 @@ const NoiseOverlay: React.FC<{ intensity: number }> = ({ intensity }) => (
 );
 
 export const AfterEffects: React.FC<AfterEffectsProps> = ({ config, children }) => {
-    const { chromaticAberration, grain } = config;
+    const { chromaticAberration, grain, bloom } = config;
     
     return (
         <div className="relative w-full h-full">
             <svg width="0" height="0" style={{ position: 'absolute' }}>
                 <defs>
+                    {/* Bloom/Glow Filter */}
+                    <filter id="bloom-effect">
+                        <feGaussianBlur in="SourceGraphic" stdDeviation={bloom * 10} result="blur" />
+                        <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 ${bloom * 2} 0" result="glow" />
+                        <feBlend in="SourceGraphic" in2="glow" mode="screen" />
+                    </filter>
+                    
                     <filter id="chromatic-aberration">
                         <feColorMatrix in="SourceGraphic" type="matrix" result="red"
                             values={`1 0 0 0 0
@@ -53,7 +60,12 @@ export const AfterEffects: React.FC<AfterEffectsProps> = ({ config, children }) 
             </svg>
             <div 
                 className="w-full h-full" 
-                style={{ filter: chromaticAberration > 0 ? 'url(#chromatic-aberration)' : 'none' }}
+                style={{ 
+                    filter: [
+                        bloom > 0 ? 'url(#bloom-effect)' : '',
+                        chromaticAberration > 0 ? 'url(#chromatic-aberration)' : ''
+                    ].filter(Boolean).join(' ') || 'none'
+                }}
             >
                 {children}
             </div>

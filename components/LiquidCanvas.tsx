@@ -3,6 +3,7 @@ import React, { useRef, useEffect, useCallback, useState } from 'react';
 import type { LiquidConfig } from '../types';
 import { supportsWebGL } from '../engines/liquid-pixi/capabilities';
 import { LiquidRenderer } from '../engines/liquid-pixi/LiquidRenderer';
+import { getHueShiftedColor } from '../utils/colorUtils';
 
 // Canvas2D fallback renderer (original particle system)
 const Canvas2DFluid = (canvas: HTMLCanvasElement, initialConfig: LiquidConfig, opts?: { performanceMode?: boolean }) => {
@@ -65,14 +66,21 @@ const Canvas2DFluid = (canvas: HTMLCanvasElement, initialConfig: LiquidConfig, o
 
         if (ctx && p.radius > 0.1) {
             const alpha = Math.max(0, p.life / p.maxLife);
+            const ageRatio = 1 - (p.life / p.maxLife); // 0 = new, 1 = old
+
+            // Apply hue shifting if enabled
+            const hueShift = currentConfig.hueShift ?? 0;
+            const displayColor = hueShift > 0 
+              ? getHueShiftedColor(p.color, ageRatio, hueShift)
+              : p.color;
 
             // Create a soft, glowing gradient for each particle
             const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius);
             
             // Simple hex to rgba conversion
-            const r = parseInt(p.color.slice(1, 3), 16);
-            const g = parseInt(p.color.slice(3, 5), 16);
-            const b = parseInt(p.color.slice(5, 7), 16);
+            const r = parseInt(displayColor.slice(1, 3), 16);
+            const g = parseInt(displayColor.slice(3, 5), 16);
+            const b = parseInt(displayColor.slice(5, 7), 16);
             
             gradient.addColorStop(0, `rgba(${r}, ${g}, ${b}, ${alpha * 0.8})`);
             gradient.addColorStop(0.4, `rgba(${r}, ${g}, ${b}, ${alpha * 0.2})`);
@@ -95,6 +103,24 @@ const Canvas2DFluid = (canvas: HTMLCanvasElement, initialConfig: LiquidConfig, o
   const instance = {
     updateConfig: (newConfig: LiquidConfig) => {
       currentConfig = newConfig;
+    },
+    erase: (x: number, y: number, radius: number) => {
+      const { devicePixelRatio = 1 } = window;
+      const ex = x * devicePixelRatio;
+      const ey = y * devicePixelRatio;
+      const er = radius * devicePixelRatio;
+      
+      // Remove particles within radius
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        const dx = p.x - ex;
+        const dy = p.y - ey;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        if (distance < er) {
+          particles.splice(i, 1);
+        }
+      }
     },
     splat: (x: number, y: number, radius: number, color: string) => {
       const { devicePixelRatio = 1 } = window;
@@ -358,6 +384,18 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
 
   const splat = useCallback((x: number, y: number) => {
     if (isDemoModeRef.current) return;
+
+    const currentConfig = configRef.current;
+    const canvasWidth = containerRef.current?.clientWidth || 800;
+    const baseRadius = canvasWidth * 0.05 * (currentConfig.splatRadius ?? 0.25);
+
+    // Handle eraser mode
+    if (currentConfig.eraserMode) {
+      if (fallbackFluidRef.current && fallbackFluidRef.current.erase) {
+        fallbackFluidRef.current.erase(x, y, baseRadius * 1.5);
+      }
+      return;
+    }
 
     // Cycle per-splat if enabled
     const sel = selectedPresets;

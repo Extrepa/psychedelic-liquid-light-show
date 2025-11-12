@@ -40,15 +40,19 @@ export interface LiquidConfig {
   dropperEnabled?: boolean;
   
   // Brush patterns
-  brushPattern?: 'single' | 'polkadots' | 'stripes' | 'line' | 'text' | 'stamp';
+  brushPattern?: 'single' | 'polkadots' | 'stripes' | 'line' | 'spray' | 'text' | 'stamp';
   brushText?: string;
   brushStampImage?: string; // base64 data URL
   brushSpacing?: number; // for patterns like stripes/polkadots
+  eraserMode?: boolean; // eraser active
   
   // Background patterns
   backgroundPattern?: 'none' | 'grid' | 'dots' | 'radial' | 'hexagons';
   backgroundOpacity?: number; // 0-1
   backgroundScale?: number; // pattern size multiplier
+  
+  // Color effects
+  hueShift?: number; // 0-1, amount of hue rotation over particle lifetime
 }
 
 export interface SavedArtwork {
