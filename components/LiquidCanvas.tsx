@@ -411,13 +411,10 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
       }
     }
 
-    const currentConfig = configRef.current;
     const currentActiveColorIndex = activeColorIndexRef.current;
     const phase = currentConfig.activePhase || 'oil';
     const palette = phase === 'oil' ? (currentConfig.oilPalette || currentConfig.colors) : (currentConfig.waterPalette || currentConfig.colors);
     const color = palette[currentActiveColorIndex] || palette[0] || '#ff0000';
-    const canvasWidth = containerRef.current?.clientWidth || 800;
-    const baseRadius = canvasWidth * 0.05 * (currentConfig.splatRadius ?? 0.25);
     
     // Generate pattern-based splats
     const brushPattern = currentConfig.brushPattern || 'single';
