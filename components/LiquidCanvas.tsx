@@ -1,10 +1,11 @@
 
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import type { LiquidConfig } from '../types';
+import { supportsWebGL } from '../engines/liquid-pixi/capabilities';
+import { LiquidRenderer } from '../engines/liquid-pixi/LiquidRenderer';
 
-// This is a mock implementation to provide visual feedback.
-// It uses a 2D canvas context with a particle system to simulate a fluid effect.
-const WebGLFluid = (canvas: HTMLCanvasElement, initialConfig: LiquidConfig, opts?: { performanceMode?: boolean }) => {
+// Canvas2D fallback renderer (original particle system)
+const Canvas2DFluid = (canvas: HTMLCanvasElement, initialConfig: LiquidConfig, opts?: { performanceMode?: boolean }) => {
   const ctx = canvas.getContext('2d');
   let animationFrameId: number | null = null;
   const particles: any[] = [];
@@ -165,9 +166,13 @@ interface LiquidCanvasProps {
 }
 
 export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, activeColorIndex, setGetDataUrlCallback, setGetStreamCallback, cursorUrl, isDemoMode, onDemoEnd, cycleEnabled = false, cycleMode = 'sequential', cycleCadence = 'per-stroke', selectedPresets = [], presets = [], onCommitConfig, performanceMode }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fluidRef = useRef<any>(null);
+  const rendererRef = useRef<LiquidRenderer | null>(null);
+  const fallbackFluidRef = useRef<any>(null);
+  const [useWebGL, setUseWebGL] = useState<boolean>(supportsWebGL());
   const isPointerDownRef = useRef(false);
+  
   // Store config in a ref to avoid re-creating callbacks on every config change for performance
   const configRef = useRef(config);
   configRef.current = config;
@@ -176,92 +181,148 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
   const isDemoModeRef = useRef(isDemoMode);
   isDemoModeRef.current = isDemoMode;
 
+  // Initialize renderer (WebGL or Canvas2D fallback)
   useEffect(() => {
-    if (canvasRef.current && !fluidRef.current) {
-      fluidRef.current = WebGLFluid(canvasRef.current, configRef.current, { performanceMode });
+    if (!containerRef.current) return;
+    
+    if (useWebGL) {
+      // Try to create PIXI renderer
+      try {
+        rendererRef.current = new LiquidRenderer({
+          parent: containerRef.current,
+          config: configRef.current,
+          performanceMode,
+        });
+        
+        if (isPlaying) {
+          rendererRef.current.play();
+        }
+        
+        console.log('[LiquidCanvas] Using WebGL (PIXI) renderer');
+      } catch (err) {
+        console.warn('[LiquidCanvas] WebGL init failed, falling back to Canvas2D:', err);
+        setUseWebGL(false);
+      }
     }
     
-    if (fluidRef.current && isPlaying) {
-      fluidRef.current.play();
+    // Canvas2D fallback
+    if (!useWebGL && canvasRef.current) {
+      fallbackFluidRef.current = Canvas2DFluid(canvasRef.current, configRef.current, { performanceMode });
+      if (isPlaying) {
+        fallbackFluidRef.current.play();
+      }
+      console.log('[LiquidCanvas] Using Canvas2D fallback renderer');
     }
 
     return () => {
-      fluidRef.current?.destroy();
-      fluidRef.current = null;
-    }
-  }, [performanceMode]); // Recreate if performance mode toggles
+      rendererRef.current?.destroy();
+      rendererRef.current = null;
+      fallbackFluidRef.current?.destroy();
+      fallbackFluidRef.current = null;
+    };
+  }, [performanceMode, useWebGL]); // Recreate if performance mode toggles
 
+  // Demo mode (auto-splat)
   useEffect(() => {
+    const renderer = rendererRef.current || fallbackFluidRef.current;
     let demoInterval: number | null = null;
-    if (isDemoMode && fluidRef.current) {
-      fluidRef.current.play();
+    
+    if (isDemoMode && renderer) {
+      renderer.play();
       demoInterval = window.setInterval(() => {
-        if (!isDemoModeRef.current || !fluidRef.current) {
+        if (!isDemoModeRef.current || !renderer) {
           if (demoInterval) clearInterval(demoInterval);
           return;
         }
         const currentConfig = configRef.current;
-        const colors = currentConfig.colors;
-        if (canvasRef.current && colors.length > 0) {
-          const x = canvasRef.current.clientWidth * Math.random();
-          const y = canvasRef.current.clientHeight * Math.random();
-          const color = colors[Math.floor(Math.random() * colors.length)];
-          const radius = canvasRef.current.clientWidth * 0.05 * (Math.random() * 0.5 + 0.25);
-          fluidRef.current.splat(x, y, radius, color);
+        const palette = currentConfig.oilPalette || currentConfig.colors;
+        if (containerRef.current && palette.length > 0) {
+          const w = containerRef.current.clientWidth;
+          const h = containerRef.current.clientHeight;
+          const x = w * Math.random();
+          const y = h * Math.random();
+          const color = palette[Math.floor(Math.random() * palette.length)];
+          const radius = w * 0.05 * (Math.random() * 0.5 + 0.25);
+          
+          if (rendererRef.current) {
+            rendererRef.current.splat(x, y, radius, color, 'oil');
+          } else if (fallbackFluidRef.current) {
+            fallbackFluidRef.current.splat(x, y, radius, color);
+          }
         }
       }, 500);
-    } else if (!isDemoMode && fluidRef.current) {
-        fluidRef.current.clear();
+    } else if (!isDemoMode && renderer) {
+        renderer.clear();
         onDemoEnd();
     }
 
     return () => {
       if (demoInterval) clearInterval(demoInterval);
     };
-  }, [isDemoMode, onDemoEnd]);
+  }, [isDemoMode, onDemoEnd, useWebGL]);
 
+  // Config updates
   useEffect(() => {
-    if (fluidRef.current) {
-      fluidRef.current.updateConfig(config);
+    if (rendererRef.current) {
+      rendererRef.current.updateConfig(config);
+    } else if (fallbackFluidRef.current) {
+      fallbackFluidRef.current.updateConfig(config);
     }
   }, [config]);
 
+  // Play/pause
   useEffect(() => {
-    if (fluidRef.current && !isDemoMode) { // Don't let user pause the demo
+    const renderer = rendererRef.current || fallbackFluidRef.current;
+    if (renderer && !isDemoMode) {
       if (isPlaying) {
-        fluidRef.current.play();
+        renderer.play();
       } else {
-        fluidRef.current.pause();
+        renderer.pause();
       }
     }
   }, [isPlaying, isDemoMode]);
 
+  // Capture callbacks
   useEffect(() => {
     const getUrl = () => {
-      return canvasRef.current?.toDataURL('image/jpeg', 0.8) || '';
+      if (rendererRef.current) {
+        return rendererRef.current.getCanvas().toDataURL('image/jpeg', 0.8);
+      } else if (canvasRef.current) {
+        return canvasRef.current.toDataURL('image/jpeg', 0.8);
+      }
+      return '';
     };
     setGetDataUrlCallback(getUrl);
     
     const getStream = () => {
-      return canvasRef.current?.captureStream(30) || new MediaStream();
+      if (rendererRef.current) {
+        return rendererRef.current.getCanvas().captureStream(30);
+      } else if (canvasRef.current) {
+        return canvasRef.current.captureStream(30);
+      }
+      return new MediaStream();
     };
     setGetStreamCallback(getStream);
 
-  }, [setGetDataUrlCallback, setGetStreamCallback]);
+  }, [setGetDataUrlCallback, setGetStreamCallback, useWebGL]);
 
   // Preset cycle internal state (per stroke)
   const cycleStateRef = useRef<{ active: boolean; state: { current: number; dir: 1 | -1 }; lastApplied?: Partial<LiquidConfig> } | null>(null);
 
   const applyEphemeralPreset = useCallback((presetCfg: Partial<LiquidConfig>, presetName?: string) => {
-    // Clamp activeColorIndex if colors shrink
     const target = { ...configRef.current, ...presetCfg } as LiquidConfig;
     if (activeColorIndexRef.current >= target.colors.length) {
       activeColorIndexRef.current = Math.max(0, target.colors.length - 1);
     }
-    fluidRef.current?.updateConfig(target);
+    
+    if (rendererRef.current) {
+      rendererRef.current.updateConfig(target);
+    } else if (fallbackFluidRef.current) {
+      fallbackFluidRef.current.updateConfig(target);
+    }
+    
     configRef.current = target;
     cycleStateRef.current && (cycleStateRef.current.lastApplied = presetCfg);
-    // Notify HUD step
     // @ts-expect-error optional callback at runtime
     (window.__onCycleStep || onCommitConfig) && (window.__onCycleStep?.(presetName), null);
   }, []);
@@ -269,31 +330,36 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
   const splat = useCallback((x: number, y: number) => {
     if (isDemoModeRef.current) return;
 
-    // If cycling per splat, advance before applying the splat
+    // Cycle per-splat if enabled
     const sel = selectedPresets;
     if (cycleStateRef.current?.active && cycleCadence === 'per-splat' && sel.length > 0 && presets.length > 0) {
       const now = performance.now();
       const gate = (cycleStateRef.current as any).lastAt || 0;
-      // throttle to ~60ms to avoid excessive reconfig on very fast moves
       if (now - gate > 60) {
         const idxInSel = cycleStateRef.current.state.current;
         const preset = presets[sel[idxInSel]];
         if (preset) applyEphemeralPreset(preset.config, preset.name);
         (cycleStateRef.current as any).lastAt = now;
-        // move to next for subsequent splat
         cycleStateRef.current.state = nextIndex(cycleMode, cycleStateRef.current.state, sel.length);
       }
     }
 
     const currentConfig = configRef.current;
     const currentActiveColorIndex = activeColorIndexRef.current;
-    if (fluidRef.current && canvasRef.current && currentConfig.colors[currentActiveColorIndex]) {
-        const radius = canvasRef.current.clientWidth * 0.05 * currentConfig.splatRadius;
-        fluidRef.current.splat(x, y, radius, currentConfig.colors[currentActiveColorIndex]);
+    const phase = currentConfig.activePhase || 'oil';
+    const palette = phase === 'oil' ? (currentConfig.oilPalette || currentConfig.colors) : (currentConfig.waterPalette || currentConfig.colors);
+    const color = palette[currentActiveColorIndex] || palette[0] || '#ff0000';
+    const canvasWidth = containerRef.current?.clientWidth || 800;
+    const radius = canvasWidth * 0.05 * (currentConfig.splatRadius ?? 0.25);
+    
+    if (rendererRef.current) {
+      rendererRef.current.splat(x, y, radius, color, phase);
+    } else if (fallbackFluidRef.current) {
+      fallbackFluidRef.current.splat(x, y, radius, color);
     }
   }, [applyEphemeralPreset, cycleCadence, cycleMode, presets, selectedPresets]);
   
-  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
       isPointerDownRef.current = true;
 
       // Begin cycling for this stroke if enabled
@@ -326,7 +392,7 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
     window.__onCycleEnd && window.__onCycleEnd();
   }, [onCommitConfig]);
 
-  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLCanvasElement>) => {
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (isPointerDownRef.current) {
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -336,14 +402,23 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
   }, [splat]);
 
   return (
-    <canvas 
-      ref={canvasRef} 
+    <div
+      ref={containerRef}
       className="absolute inset-0 w-full h-full"
       style={{ cursor: cursorUrl ? `url(${cursorUrl}) 16 16, crosshair` : 'crosshair' }}
       onPointerDown={handlePointerDown}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
       onPointerMove={handlePointerMove}
-    />
+    >
+      {/* Canvas2D fallback */}
+      {!useWebGL && (
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 w-full h-full"
+        />
+      )}
+      {/* WebGL renderer will append its own canvas to containerRef */}
+    </div>
   );
 };
