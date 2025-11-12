@@ -33,8 +33,6 @@
 
 > A virtual recreation of 1960s-era liquid light shows using interactive Canvas2D particle simulations and AI-powered color palette generation.
 
-https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6
-
 ## Overview
 
 This app recreates the mesmerizing art form of projecting oil, water, and food coloring through overhead projectors—a staple of psychedelic performances in the 1960s. Now featuring **realistic two-phase fluid simulation** with oil floating above water, immiscible color mixing, buoyancy, surface tension, specular highlights, Fresnel reflections, refraction, and optional thin-film interference.
@@ -42,8 +40,6 @@ This app recreates the mesmerizing art form of projecting oil, water, and food c
 Users can paint flowing, morphing blobs of color, toggle between oil and water droppers, tweak realistic physics parameters, generate AI-powered palettes, apply post-processing effects, and record their creations.
 
 Built with: React 19, TypeScript, Vite, **PIXI.js v8 + WebGL shaders**, Canvas2D fallback, and Google Gemini AI.
-
-View in AI Studio: https://ai.studio/apps/drive/15tTC3EwsPv9lJAFVS8PWjoeYllbVW9aS
 
 ---
 
@@ -204,12 +200,6 @@ Explore detailed guides:
 - Troubleshooting: ./docs/troubleshooting.md
 - Refactoring: ./docs/refactoring.md
 - Roadmap: ./docs/roadmap.md
-
----
-
-## License
-
-This project was created as part of an AI Studio exploration. See the repository for license information.
 
 ---
 
