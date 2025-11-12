@@ -111,14 +111,15 @@ export const ControlDock: React.FC<ControlDockProps> = ({
       <div
         ref={dockRef}
         className="fixed z-[4000] select-none whitespace-nowrap"
-        style={{ left: pinned ? 8 : pos.x, top: pinned ? 8 : pos.y, transform: `scale(${scale})`, transformOrigin: 'top left' }}
+        style={{ left: pinned ? 8 : pos.x, top: pinned ? 8 : pos.y, transform: `scale(${scale})`, transformOrigin: 'top left', height: pinned ? 'calc(100vh - 16px)' : undefined }}
       >
-      <div
-        className="flex items-center gap-1 p-1 bg-gray-900/70 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl"
-        onPointerDown={onDragStart}
-        onPointerMove={onDragMove}
-        onPointerUp={onDragEnd}
-      >
+      <div className="flex flex-col h-full">
+        <div
+          className="flex items-center gap-1 p-1 bg-gray-900/70 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl"
+          onPointerDown={onDragStart}
+          onPointerMove={onDragMove}
+          onPointerUp={onDragEnd}
+        >
         <button onClick={onTogglePlay} className="p-1 rounded bg-gray-800/80 text-gray-200 hover:bg-gray-700">
           {isPlaying ? <PauseIcon className="w-4 h-4"/> : <PlayIcon className="w-4 h-4"/>}
         </button>
@@ -136,29 +137,30 @@ export const ControlDock: React.FC<ControlDockProps> = ({
         <div className="w-px h-5 bg-gray-700 mx-1" />
         <button onClick={()=>setPinned(p=>!p)} className={`px-2 py-1 text-xs rounded ${pinned?'bg-purple-600/40 text-white':'bg-gray-800/80 text-gray-200 hover:bg-gray-700'}`}>{pinned?'Pinned':'Free'}</button>
         <button onClick={()=>setCollapsed(c=>!c)} className="px-2 py-1 text-xs rounded bg-gray-800/80 text-gray-200 hover:bg-gray-700">{collapsed?'Show':'Hide'}</button>
-      </div>
-      {!collapsed && (
-        <div className="mt-1 bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl p-2 w-[min(92vw,300px)] max-h-[60vh] overflow-auto">
-          {activeTab==='brush' && (
-            <BrushPanel config={config} updateConfig={updateConfig} onSetSymmetryOrigin={onSetSymmetryOrigin} />
-          )}
-          {activeTab==='colors' && (
-            <ColorPanel config={config} updateConfig={updateConfig} onGeneratePalette={onGeneratePalette} onGenerateVibe={onGenerateVibe} isGenerating={isGenerating} activeColorIndex={activeColorIndex} setActiveColorIndex={setActiveColorIndex} />
-          )}
-          {activeTab==='presets' && (
-            <PresetsPanel onApply={(cfg)=>updateConfig(cfg)} />
-          )}
-          {activeTab==='effects' && (
-            <EffectsPanel config={config} updateConfig={updateConfig} isGridVisible={false} setIsGridVisible={()=>{}} />
-          )}
-          {activeTab==='simulation' && (
-            <SimulationPanel config={config} updateConfig={updateConfig} />
-          )}
-          {activeTab==='settings' && (
-            <SettingsPanel onClose={()=>setCollapsed(true)} onPerfChange={()=>{}} config={config} updateConfig={updateConfig} />
-          )}
         </div>
-      )}
+        {!collapsed && (
+          <div className="mt-1 bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl p-2 w-[min(92vw,360px)] flex-1 overflow-auto">
+            {activeTab==='brush' && (
+              <BrushPanel config={config} updateConfig={updateConfig} onSetSymmetryOrigin={onSetSymmetryOrigin} />
+            )}
+            {activeTab==='colors' && (
+              <ColorPanel config={config} updateConfig={updateConfig} onGeneratePalette={onGeneratePalette} onGenerateVibe={onGenerateVibe} isGenerating={isGenerating} activeColorIndex={activeColorIndex} setActiveColorIndex={setActiveColorIndex} />
+            )}
+            {activeTab==='presets' && (
+              <PresetsPanel onApply={(cfg)=>updateConfig(cfg)} />
+            )}
+            {activeTab==='effects' && (
+              <EffectsPanel config={config} updateConfig={updateConfig} isGridVisible={false} setIsGridVisible={()=>{}} />
+            )}
+            {activeTab==='simulation' && (
+              <SimulationPanel config={config} updateConfig={updateConfig} />
+            )}
+            {activeTab==='settings' && (
+              <SettingsPanel onClose={()=>setCollapsed(true)} onPerfChange={()=>{}} config={config} updateConfig={updateConfig} />
+            )}
+          </div>
+        )}
+      </div>
       </div>
     </>
   );

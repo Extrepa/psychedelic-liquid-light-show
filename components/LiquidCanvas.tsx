@@ -952,24 +952,62 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
 
       {/* Dropper art overlay (follows cursor) */}
       {configRef.current.dropperCursorEnabled && configRef.current.dropperCursorUrl && lastPointerPosRef.current && (
-        <img
-          src={configRef.current.dropperCursorUrl}
-          alt="dropper"
-          className="absolute pointer-events-none select-none"
-          style={{
-            left: lastPointerPosRef.current.x - (configRef.current.dropperCursorTipOffsetX ?? ((configRef.current.dropperCursorSizePx ?? 42) * 0.25)),
-            top: lastPointerPosRef.current.y - (configRef.current.dropperCursorTipOffsetY ?? ((configRef.current.dropperCursorSizePx ?? 42) * 0.75)),
-            width: (configRef.current.dropperCursorSizePx ?? 42),
-            height: 'auto',
-            opacity: 0.95,
-            filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.45))',
-            transform: `rotate(${configRef.current.dropperCursorRotationDeg ?? -8}deg)`,
-          }}
-        />
+        (()=>{
+          // Determine active color and approximate tint via CSS filter
+          const currentActiveColorIndex = activeColorIndexRef.current;
+          const phase = configRef.current.activePhase || 'oil';
+          const palette = phase === 'oil' ? (configRef.current.oilPalette || configRef.current.colors) : (configRef.current.waterPalette || configRef.current.colors);
+          const color = palette[currentActiveColorIndex] || palette[0] || '#ffffff';
+
+          const hexToHsl = (hex: string) => {
+            let h=0,s=0,l=0;
+            const m = hex.replace('#','');
+            const bigint = parseInt(m.length===3 ? m.split('').map(c=>c+c).join('') : m, 16);
+            const r = ((bigint>>16)&255)/255;
+            const g = ((bigint>>8)&255)/255;
+            const b = (bigint&255)/255;
+            const max = Math.max(r,g,b), min = Math.min(r,g,b);
+            l = (max+min)/2;
+            if (max===min) { h=0; s=0; }
+            else {
+              const d = max-min;
+              s = l>0.5 ? d/(2-max-min) : d/(max+min);
+              switch(max){
+                case r: h = (g-b)/d + (g<b?6:0); break;
+                case g: h = (b-r)/d + 2; break;
+                case b: h = (r-g)/d + 4; break;
+              }
+              h/=6;
+            }
+            return {h: h*360, s, l};
+          };
+          const {h} = hexToHsl(color.startsWith('#')?color:'#ffffff');
+          const tintFilter = `sepia(1) saturate(6000%) hue-rotate(${Math.round(h)}deg) brightness(1.0)`;
+          const left = lastPointerPosRef.current.x - (configRef.current.dropperCursorTipOffsetX ?? ((configRef.current.dropperCursorSizePx ?? 42) * 0.25));
+          const top = lastPointerPosRef.current.y - (configRef.current.dropperCursorTipOffsetY ?? ((configRef.current.dropperCursorSizePx ?? 42) * 0.75));
+          const w = (configRef.current.dropperCursorSizePx ?? 42);
+          return (
+            <img
+              src={configRef.current.dropperCursorUrl!}
+              alt="dropper"
+              className="absolute pointer-events-none select-none"
+              style={{
+                left,
+                top,
+                width: w,
+                height: 'auto',
+                opacity: 0.98,
+                filter: `${tintFilter} drop-shadow(0 2px 6px rgba(0,0,0,0.45))`,
+                transform: `rotate(${configRef.current.dropperCursorRotationDeg ?? -8}deg)`,
+                mixBlendMode: 'screen',
+              }}
+            />
+          );
+        })()
       )}
       
       {/* Symmetry origin crosshair */}
-      {configRef.current.symmetryEnabled && configRef.current.symmetryOrigin && containerRef.current && (
+      {configRef.current.symmetryEnabled && configRef.current.symmetryOrigin && containerRef.current && !(configRef.current.dropperCursorEnabled && configRef.current.dropperCursorUrl) && (
         <div
           className="absolute pointer-events-none"
           style={{

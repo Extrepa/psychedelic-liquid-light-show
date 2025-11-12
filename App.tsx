@@ -32,6 +32,7 @@ import { WelcomeScreen } from './components/WelcomeScreen';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { OnboardingHint } from './components/OnboardingHint';
 import { ControlDock } from './components/ControlDock';
+import { DimmerSlider } from './components/DimmerSlider';
 import { GestureControls } from './components/GestureControls';
 import { ShakeToClear } from './components/ShakeToClear';
 // New hooks
@@ -387,7 +388,8 @@ function App() {
         <AfterEffects config={config}>
           {/* Floating control dock (movable) */}
           {!isWelcomeScreenVisible && (
-            <ControlDock
+            <>
+              <ControlDock
               config={config}
               updateConfig={updateConfigWithColorGuard}
               isPlaying={isPlaying}
@@ -406,6 +408,8 @@ function App() {
               isGenerating={isGenerating}
               onSetSymmetryOrigin={() => setSymmetryOriginModeRef.current?.(true)}
             />
+              <DimmerSlider config={config} updateConfig={updateConfigWithColorGuard} />
+            </>
           )}
           <LiquidCanvas
             config={config}
