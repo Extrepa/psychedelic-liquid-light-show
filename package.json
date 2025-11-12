@@ -12,16 +12,18 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "pixi.js": "^8.14.1",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "vite-plugin-glsl": "^1.5.4"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.1.0",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
+    "jsdom": "^25.0.1",
     "typescript": "~5.8.2",
     "vite": "^6.2.0",
-    "vitest": "^2.1.4",
-    "jsdom": "^25.0.1",
-    "@testing-library/react": "^16.1.0"
+    "vitest": "^2.1.4"
   }
 }
