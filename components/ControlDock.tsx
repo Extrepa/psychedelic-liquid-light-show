@@ -70,6 +70,7 @@ export const ControlDock: React.FC<ControlDockProps> = ({
   type TabId = typeof TABS[number]['id'];
   const [activeTab, setActiveTab] = useState<TabId>('brush');
   const [collapsed, setCollapsed] = useState(false);
+  const [pinned, setPinned] = useState(true); // default: pinned top-left
   const [pos, setPos] = useState<{x:number;y:number}>(() => {
     try {
       const raw = localStorage.getItem('ui:dock-pos');
@@ -82,13 +83,14 @@ export const ControlDock: React.FC<ControlDockProps> = ({
   const dockRef = useRef<HTMLDivElement>(null);
 
   const onDragStart = (e: React.PointerEvent) => {
+    if (pinned) return; // disable drag when pinned
     const el = dockRef.current; if (!el) return;
     const rect = el.getBoundingClientRect();
     draggingRef.current = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
   const onDragMove = (e: React.PointerEvent) => {
-    if (!draggingRef.current) return;
+    if (!draggingRef.current || pinned) return;
     const nx = Math.max(4, Math.min(window.innerWidth - 200, e.clientX - draggingRef.current.dx));
     const ny = Math.max(4, Math.min(window.innerHeight - 120, e.clientY - draggingRef.current.dy));
     setPos({ x: nx, y: ny });
@@ -97,11 +99,20 @@ export const ControlDock: React.FC<ControlDockProps> = ({
 
   const scale = 0.8; // compact by ~20%
   return (
-    <div
-      ref={dockRef}
-      className="fixed z-[4000] select-none"
-      style={{ left: pos.x, top: pos.y, transform: `scale(${scale})`, transformOrigin: 'top left' }}
-    >
+    <>
+      {collapsed && (
+        <button
+          className="fixed top-2 left-2 z-[4001] px-2 py-1 text-xs rounded bg-gray-900/80 text-gray-200 border border-gray-700/60 shadow-xl"
+          onClick={()=>setCollapsed(false)}
+        >
+          Open Controls
+        </button>
+      )}
+      <div
+        ref={dockRef}
+        className="fixed z-[4000] select-none whitespace-nowrap"
+        style={{ left: pinned ? 8 : pos.x, top: pinned ? 8 : pos.y, transform: `scale(${scale})`, transformOrigin: 'top left' }}
+      >
       <div
         className="flex items-center gap-1 p-1 bg-gray-900/70 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl"
         onPointerDown={onDragStart}
@@ -123,6 +134,7 @@ export const ControlDock: React.FC<ControlDockProps> = ({
           </button>
         ))}
         <div className="w-px h-5 bg-gray-700 mx-1" />
+        <button onClick={()=>setPinned(p=>!p)} className={`px-2 py-1 text-xs rounded ${pinned?'bg-purple-600/40 text-white':'bg-gray-800/80 text-gray-200 hover:bg-gray-700'}`}>{pinned?'Pinned':'Free'}</button>
         <button onClick={()=>setCollapsed(c=>!c)} className="px-2 py-1 text-xs rounded bg-gray-800/80 text-gray-200 hover:bg-gray-700">{collapsed?'Show':'Hide'}</button>
       </div>
       {!collapsed && (
@@ -147,6 +159,7 @@ export const ControlDock: React.FC<ControlDockProps> = ({
           )}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };

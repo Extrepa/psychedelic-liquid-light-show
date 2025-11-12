@@ -14,7 +14,7 @@ export const DEFAULT_CONFIG: LiquidConfig = {
   splatRadius: 0.25,
   blendMode: 'lighter',
   chromaticAberration: 0,
-  grain: 0.1,
+  grain: 0.02,
 
   // Two-phase physics (enhanced for push-away feel)
   surfaceTension: 0.6, // +0.1 for stronger droplet formation
