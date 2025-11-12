@@ -21,3 +21,8 @@ Follow‑ups
 - Finish test runner setup to resolve type errors in tests
 - Re‑enable WebGL path after PIXI v8 shader fixes
 - Mobile tip alignment preset per DPI (optional)
+
+In progress (Phase A)
+- Crosshair smaller for targeting (configurable)
+- Red preview growth lags by ~0.5s to indicate planned size
+- Smooth animation; no change to commit timing

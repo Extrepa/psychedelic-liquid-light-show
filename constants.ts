@@ -70,6 +70,10 @@ export const DEFAULT_CONFIG: LiquidConfig = {
   dropperCursorRotationDeg: -8,
   dropperCursorTipOffsetX: 10,
   dropperCursorTipOffsetY: 32,
+
+  // Targeting visuals
+  crosshairSizePx: 12,
+  dropPreviewLagMs: 500,
   
   // Optional modes (off by default)
   dripEnabled: false,

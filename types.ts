@@ -84,6 +84,10 @@ export interface LiquidConfig {
   dropperCursorRotationDeg?: number; // visual rotation of the dropper art
   dropperCursorTipOffsetX?: number; // px from image left to tip alignment
   dropperCursorTipOffsetY?: number; // px from image top to tip alignment
+
+  // Targeting visuals
+  crosshairSizePx?: number; // size of symmetry/target crosshair in pixels
+  dropPreviewLagMs?: number; // delay for preview growth (ms)
   
   // Optional modes (off by default)
   dripEnabled?: boolean; // emit micro-drops at interval while holding

@@ -514,7 +514,9 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
       }
       
       const now = performance.now();
-      const heldMs = now - pointerDownAtRef.current;
+      const heldMsRaw = now - pointerDownAtRef.current;
+      const lag = configRef.current.dropPreviewLagMs ?? 500;
+      const heldMs = Math.max(0, heldMsRaw - lag);
       const timeToMax = configRef.current.dropTimeToMaxMs || 1200;
       const progress = Math.min(heldMs / timeToMax, 1);
       const easingFn = getEasing(configRef.current.dropEasing || 'ease-out');
@@ -795,15 +797,32 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
   }, []);
   
   const handleColorSelect = useCallback((color: string) => {
-    // Add color to palette if not present
-    const currentColors = configRef.current.colors;
-    let newIndex = currentColors.indexOf(color);
-    if (newIndex === -1) {
-      updateConfig({ colors: [...currentColors, color] });
-      newIndex = currentColors.length;
+    const cfg = configRef.current;
+    const idx = activeColorIndexRef.current;
+
+    // If phase palettes exist, update the active palette slot so splats use it immediately
+    if (cfg.activePhase === 'oil' && Array.isArray(cfg.oilPalette) && cfg.oilPalette.length) {
+      const oil = [...cfg.oilPalette];
+      if (idx < oil.length) oil[idx] = color; else oil.push(color);
+      // Keep UI colors in sync with current phase palette
+      updateConfig({ oilPalette: oil, colors: oil });
+      onChangeActiveColor?.(Math.min(idx, oil.length - 1));
+      return;
     }
-    activeColorIndexRef.current = newIndex;
-    onChangeActiveColor?.(newIndex);
+    if (cfg.activePhase === 'water' && Array.isArray(cfg.waterPalette) && cfg.waterPalette.length) {
+      const water = [...cfg.waterPalette];
+      if (idx < water.length) water[idx] = color; else water.push(color);
+      updateConfig({ waterPalette: water, colors: water });
+      onChangeActiveColor?.(Math.min(idx, water.length - 1));
+      return;
+    }
+
+    // Fallback: operate on generic colors array
+    const currentColors = cfg.colors || [];
+    const next = [...currentColors];
+    if (idx < next.length) next[idx] = color; else next.push(color);
+    updateConfig({ colors: next });
+    onChangeActiveColor?.(Math.min(idx, next.length - 1));
   }, [onChangeActiveColor, updateConfig]);
   
   // Edge runoff model
@@ -946,16 +965,18 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
       {/* Symmetry origin crosshair */}
       {configRef.current.symmetryEnabled && configRef.current.symmetryOrigin && containerRef.current && (
         <div
-          className="absolute w-4 h-4 pointer-events-none"
+          className="absolute pointer-events-none"
           style={{
-            left: (configRef.current.symmetryOrigin.x * containerRef.current.clientWidth) - 8,
-            top: (configRef.current.symmetryOrigin.y * containerRef.current.clientHeight) - 8,
+            width: (configRef.current.crosshairSizePx ?? 12),
+            height: (configRef.current.crosshairSizePx ?? 12),
+            left: (configRef.current.symmetryOrigin.x * containerRef.current.clientWidth) - (configRef.current.crosshairSizePx ?? 12) / 2,
+            top: (configRef.current.symmetryOrigin.y * containerRef.current.clientHeight) - (configRef.current.crosshairSizePx ?? 12) / 2,
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" className="drop-shadow-md">
-            <line x1="8" y1="0" x2="8" y2="16" stroke="white" strokeWidth="1.5" />
-            <line x1="0" y1="8" x2="16" y2="8" stroke="white" strokeWidth="1.5" />
-            <circle cx="8" cy="8" r="3" fill="none" stroke="white" strokeWidth="1.5" />
+          <svg width={configRef.current.crosshairSizePx ?? 12} height={configRef.current.crosshairSizePx ?? 12} viewBox="0 0 16 16" className="drop-shadow-md">
+            <line x1="8" y1="0" x2="8" y2="16" stroke="white" strokeWidth="1.2" />
+            <line x1="0" y1="8" x2="16" y2="8" stroke="white" strokeWidth="1.2" />
+            <circle cx="8" cy="8" r="3" fill="none" stroke="white" strokeWidth="1.2" />
           </svg>
         </div>
       )}

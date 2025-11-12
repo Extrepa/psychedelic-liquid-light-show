@@ -25,3 +25,11 @@ Next
 - Optional dropper tip fine‑tune UI preset per vibe
 - WebGL re-enable once PIXI v8 shader types resolved
 - Test suite fix (add test runner types)
+
+2025-11-12 09:04 — Plan accepted; beginning Phase A
+- A1 Crosshair size: add config crosshairSizePx (default 12) and apply to symmetry origin crosshair
+- A2 Red preview lag: add dropPreviewLagMs (default 500ms), preview grows with lag vs actual drop radius
+- A3 Verify smooth animation and no jank, commit remains immediate on release
+- B (queued) Black overlay toggle + intensity in Settings
+- C (queued) Further mobile compaction of panels and strip
+- D (queued) Raise default brightness if needed after QA
