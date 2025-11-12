@@ -109,6 +109,51 @@ export const EffectsPanel: React.FC<EffectsPanelProps> = ({ config, updateConfig
         </Tooltip>
       </div>
       <div>
+        <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Background Pattern</h3>
+        <div className="space-y-4">
+          <Tooltip text="Choose a decorative background pattern.">
+            <select
+              value={config.backgroundPattern || 'none'}
+              onChange={e => updateConfig({ backgroundPattern: e.target.value as any })}
+              className="w-full bg-gray-900/70 border border-gray-600 text-white placeholder-gray-400 text-sm rounded-md px-3 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition duration-200"
+            >
+              <option value="none">None</option>
+              <option value="grid">Grid</option>
+              <option value="dots">Dots</option>
+              <option value="radial">Radial Circles</option>
+              <option value="hexagons">Hexagons</option>
+            </select>
+          </Tooltip>
+          
+          {config.backgroundPattern && config.backgroundPattern !== 'none' && (
+            <>
+              <Tooltip text="Pattern opacity (0 = invisible, 1 = solid)">
+                <Slider 
+                  label="Opacity" 
+                  value={config.backgroundOpacity ?? 0.1} 
+                  onChange={v => updateConfig({ backgroundOpacity: v })} 
+                  min={0}
+                  max={0.5}
+                  step={0.01}
+                />
+              </Tooltip>
+              
+              <Tooltip text="Pattern size multiplier">
+                <Slider 
+                  label="Scale" 
+                  value={config.backgroundScale ?? 1} 
+                  onChange={v => updateConfig({ backgroundScale: v })} 
+                  min={0.5}
+                  max={3}
+                  step={0.1}
+                />
+              </Tooltip>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div>
         <h3 className="text-xs text-gray-300 uppercase font-semibold mb-2">Overlays</h3>
         <Tooltip text="Toggle a visual grid for alignment.">
             <Toggle label={<><GridIcon className="w-5 h-5"/><span>Grid</span></>} checked={isGridVisible} onChange={setIsGridVisible} />

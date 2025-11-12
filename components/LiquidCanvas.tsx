@@ -163,6 +163,7 @@ interface LiquidCanvasProps {
   activeColorIndex: number;
   setGetDataUrlCallback: (callback: () => string) => void;
   setGetStreamCallback: (callback: () => MediaStream) => void;
+  setClearCallback?: (callback: () => void) => void;
   cursorUrl: string;
   isDemoMode: boolean;
   onDemoEnd: () => void;
@@ -176,7 +177,7 @@ interface LiquidCanvasProps {
   performanceMode?: boolean;
 }
 
-export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, activeColorIndex, setGetDataUrlCallback, setGetStreamCallback, cursorUrl, isDemoMode, onDemoEnd, cycleEnabled = false, cycleMode = 'sequential', cycleCadence = 'per-stroke', selectedPresets = [], presets = [], onCommitConfig, performanceMode }) => {
+export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, activeColorIndex, setGetDataUrlCallback, setGetStreamCallback, setClearCallback, cursorUrl, isDemoMode, onDemoEnd, cycleEnabled = false, cycleMode = 'sequential', cycleCadence = 'per-stroke', selectedPresets = [], presets = [], onCommitConfig, performanceMode }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<LiquidRenderer | null>(null);
@@ -317,8 +318,20 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
       return new MediaStream();
     };
     setGetStreamCallback(getStream);
+    
+    // Clear callback
+    if (setClearCallback) {
+      const clear = () => {
+        if (rendererRef.current) {
+          rendererRef.current.clear();
+        } else if (fallbackFluidRef.current) {
+          fallbackFluidRef.current.clear();
+        }
+      };
+      setClearCallback(clear);
+    }
 
-  }, [setGetDataUrlCallback, setGetStreamCallback, useWebGL]);
+  }, [setGetDataUrlCallback, setGetStreamCallback, setClearCallback, useWebGL]);
 
   // Preset cycle internal state (per stroke)
   const cycleStateRef = useRef<{ active: boolean; state: { current: number; dir: 1 | -1 }; lastApplied?: Partial<LiquidConfig> } | null>(null);

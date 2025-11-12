@@ -16,6 +16,7 @@ import { ColorPanel } from './components/controls/ColorPanel';
 import { EffectsPanel } from './components/controls/EffectsPanel';
 import { BrushPanel } from './components/controls/BrushPanel';
 import { BackgroundGradient } from './components/BackgroundGradient';
+import { BackgroundPattern } from './components/BackgroundPattern';
 import { Dropper } from './components/Dropper';
 import { SaveModal } from './components/SaveModal';
 import { GalleryModal } from './components/GalleryModal';
@@ -29,6 +30,7 @@ import { RestorePrompt } from './components/RestorePrompt';
 import { WelcomeScreen } from './components/WelcomeScreen';
 import { ShortcutsModal } from './components/ShortcutsModal';
 import { GestureControls } from './components/GestureControls';
+import { ShakeToClear } from './components/ShakeToClear';
 // New hooks
 import { useHistory } from './hooks/useHistory';
 import { useArtworkGallery } from './hooks/useArtworkGallery';
@@ -98,6 +100,7 @@ function App() {
   const getCanvasDataUrlRef = useRef<(() => string) | null>(null);
   const getCanvasStreamRef = useRef<(() => MediaStream) | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasClearRef = useRef<(() => void) | null>(null);
 
   const { showRestorePrompt, handleRestore, handleDismiss } = useSessionPersistence({
     enabled: !isWelcomeScreenVisible,
@@ -230,8 +233,28 @@ function App() {
     handleDemoEnd();
   };
   
+  const handleShakeClear = useCallback(() => {
+    if (canvasClearRef.current) {
+      canvasClearRef.current();
+      triggerToast('Canvas cleared!');
+    }
+  }, [triggerToast]);
+  
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Preset hotkeys (1-9)
+      if (!isWelcomeScreenVisible && e.key >= '1' && e.key <= '9') {
+        const presetIndex = parseInt(e.key) - 1;
+        if (presetIndex < PRESETS.length) {
+          const preset = PRESETS[presetIndex];
+          updateConfigWithColorGuard(preset.config);
+          triggerToast(`${preset.name} preset activated`);
+          e.preventDefault();
+          return;
+        }
+      }
+      
+      // Other shortcuts
       if ((e.key === '?' || (e.key === '/' && e.shiftKey)) && !isShortcutsOpen) {
         e.preventDefault(); setIsShortcutsOpen(true);
       }
@@ -242,7 +265,7 @@ function App() {
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [isShortcutsOpen]);
+  }, [isShortcutsOpen, isWelcomeScreenVisible, updateConfigWithColorGuard, triggerToast]);
 
   const getPanelTitle = (panel: Tab | null) => {
       if (!panel) return '';
@@ -250,10 +273,16 @@ function App() {
   }
 
   return (
-    <div ref={containerRef} className="relative w-screen h-screen overflow-hidden bg-gray-900 flex flex-col font-sans antialiased">
+    <div ref={containerRef} className="relative w-screen h-screen overflow-hidden flex flex-col font-sans antialiased" style={{
+      backgroundImage: 'url(/images/subtle-bg.png)',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundColor: '#0f1419'
+    }}>
       <BackgroundGradient />
       <Toast toast={toast} onClose={() => setToast(null)} />
       {!isWelcomeScreenVisible && <GestureControls config={config} updateConfig={updateConfigWithColorGuard} containerRef={containerRef} />}
+      {!isWelcomeScreenVisible && <ShakeToClear onShake={handleShakeClear} />}
       <MiniHUD visible={hudVisible && cycleEnabled && selectedPresets.length > 0} presetName={hudPreset} mode={cycleMode} cadence={cadence} />
       {showRestorePrompt && <RestorePrompt onRestore={handleRestore} onDismiss={handleDismiss} />}
       {isWelcomeScreenVisible && <WelcomeScreen onBegin={handleBegin} />}
@@ -337,6 +366,7 @@ function App() {
 
       <main className="flex-1 relative">
         {!isWelcomeScreenVisible && <Dropper config={config} updateConfig={updateConfigWithColorGuard} />}
+        {!isWelcomeScreenVisible && <BackgroundPattern config={config} />}
         <AfterEffects config={config}>
           <LiquidCanvas
             config={config}
@@ -344,6 +374,7 @@ function App() {
             activeColorIndex={activeColorIndex}
             setGetDataUrlCallback={(callback) => getCanvasDataUrlRef.current = callback}
             setGetStreamCallback={(callback) => getCanvasStreamRef.current = callback}
+            setClearCallback={(callback) => canvasClearRef.current = callback}
             cursorUrl={cursorUrl}
             isDemoMode={isWelcomeScreenVisible}
             onDemoEnd={handleDemoEnd}
