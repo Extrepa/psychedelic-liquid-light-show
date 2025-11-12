@@ -6,6 +6,7 @@
  */
 
 import * as PIXI from 'pixi.js';
+import { GlProgram } from 'pixi.js';
 import type { LiquidConfig } from '../../types';
 import { detectWebGLCapabilities } from './capabilities';
 
@@ -153,84 +154,165 @@ export class LiquidRenderer {
   
   private createShaders() {
     // Advection
-    this.advectFilter = new PIXI.Filter(passthroughVert, advectFrag, {
-      uField: PIXI.Texture.EMPTY,
-      uVelocity: PIXI.Texture.EMPTY,
-      uTexelSize: [1 / this.simWidth, 1 / this.simHeight],
-      uDt: this.dt,
-      uDissipation: 0.98,
+    this.advectFilter = new PIXI.Filter({
+      glProgram: GlProgram.from({
+        vertex: passthroughVert,
+        fragment: advectFrag,
+        name: 'advect',
+      }),
+      resources: {
+        uField: PIXI.Texture.EMPTY,
+        uVelocity: PIXI.Texture.EMPTY,
+        advectUniforms: {
+          uTexelSize: { value: [1 / this.simWidth, 1 / this.simHeight], type: 'vec2<f32>' },
+          uDt: { value: this.dt, type: 'f32' },
+          uDissipation: { value: 0.98, type: 'f32' },
+        },
+      },
     });
     
     // Divergence
-    this.divergenceFilter = new PIXI.Filter(passthroughVert, divergenceFrag, {
-      uVelocity: PIXI.Texture.EMPTY,
-      uTexelSize: [1 / this.simWidth, 1 / this.simHeight],
+    this.divergenceFilter = new PIXI.Filter({
+      glProgram: GlProgram.from({
+        vertex: passthroughVert,
+        fragment: divergenceFrag,
+        name: 'divergence',
+      }),
+      resources: {
+        uVelocity: PIXI.Texture.EMPTY,
+        divergenceUniforms: {
+          uTexelSize: { value: [1 / this.simWidth, 1 / this.simHeight], type: 'vec2<f32>' },
+        },
+      },
     });
     
     // Pressure
-    this.pressureFilter = new PIXI.Filter(passthroughVert, pressureFrag, {
-      uPressure: PIXI.Texture.EMPTY,
-      uDivergence: PIXI.Texture.EMPTY,
-      uTexelSize: [1 / this.simWidth, 1 / this.simHeight],
+    this.pressureFilter = new PIXI.Filter({
+      glProgram: GlProgram.from({
+        vertex: passthroughVert,
+        fragment: pressureFrag,
+        name: 'pressure',
+      }),
+      resources: {
+        uPressure: PIXI.Texture.EMPTY,
+        uDivergence: PIXI.Texture.EMPTY,
+        pressureUniforms: {
+          uTexelSize: { value: [1 / this.simWidth, 1 / this.simHeight], type: 'vec2<f32>' },
+        },
+      },
     });
     
     // Gradient subtraction
-    this.gradientFilter = new PIXI.Filter(passthroughVert, gradientFrag, {
-      uVelocity: PIXI.Texture.EMPTY,
-      uPressure: PIXI.Texture.EMPTY,
-      uTexelSize: [1 / this.simWidth, 1 / this.simHeight],
+    this.gradientFilter = new PIXI.Filter({
+      glProgram: GlProgram.from({
+        vertex: passthroughVert,
+        fragment: gradientFrag,
+        name: 'gradient',
+      }),
+      resources: {
+        uVelocity: PIXI.Texture.EMPTY,
+        uPressure: PIXI.Texture.EMPTY,
+        gradientUniforms: {
+          uTexelSize: { value: [1 / this.simWidth, 1 / this.simHeight], type: 'vec2<f32>' },
+        },
+      },
     });
     
     // Diffusion
-    this.diffuseFilter = new PIXI.Filter(passthroughVert, diffuseFrag, {
-      uVelocity: PIXI.Texture.EMPTY,
-      uTexelSize: [1 / this.simWidth, 1 / this.simHeight],
-      uViscosity: this.config.viscosity ?? 0.2,
-      uDt: this.dt,
+    this.diffuseFilter = new PIXI.Filter({
+      glProgram: GlProgram.from({
+        vertex: passthroughVert,
+        fragment: diffuseFrag,
+        name: 'diffuse',
+      }),
+      resources: {
+        uVelocity: PIXI.Texture.EMPTY,
+        diffuseUniforms: {
+          uTexelSize: { value: [1 / this.simWidth, 1 / this.simHeight], type: 'vec2<f32>' },
+          uViscosity: { value: this.config.viscosity ?? 0.2, type: 'f32' },
+          uDt: { value: this.dt, type: 'f32' },
+        },
+      },
     });
     
     // Splat
-    this.splatFilter = new PIXI.Filter(passthroughVert, splatFrag, {
-      uField: PIXI.Texture.EMPTY,
-      uPoint: [0.5, 0.5],
-      uRadius: 0.05,
-      uColor: [1, 0, 0],
-      uThickness: 1.0,
+    this.splatFilter = new PIXI.Filter({
+      glProgram: GlProgram.from({
+        vertex: passthroughVert,
+        fragment: splatFrag,
+        name: 'splat',
+      }),
+      resources: {
+        uField: PIXI.Texture.EMPTY,
+        splatUniforms: {
+          uPoint: { value: [0.5, 0.5], type: 'vec2<f32>' },
+          uRadius: { value: 0.05, type: 'f32' },
+          uColor: { value: [1, 0, 0], type: 'vec3<f32>' },
+          uThickness: { value: 1.0, type: 'f32' },
+        },
+      },
     });
     
     // Surface tension
-    this.surfaceTensionFilter = new PIXI.Filter(passthroughVert, surfaceTensionFrag, {
-      uField: PIXI.Texture.EMPTY,
-      uTexelSize: [1 / this.simWidth, 1 / this.simHeight],
-      uSurfaceTension: this.config.surfaceTension ?? 0.5,
-      uDt: this.dt,
+    this.surfaceTensionFilter = new PIXI.Filter({
+      glProgram: GlProgram.from({
+        vertex: passthroughVert,
+        fragment: surfaceTensionFrag,
+        name: 'surfaceTension',
+      }),
+      resources: {
+        uField: PIXI.Texture.EMPTY,
+        tensionUniforms: {
+          uTexelSize: { value: [1 / this.simWidth, 1 / this.simHeight], type: 'vec2<f32>' },
+          uSurfaceTension: { value: this.config.surfaceTension ?? 0.5, type: 'f32' },
+          uDt: { value: this.dt, type: 'f32' },
+        },
+      },
     });
     
     // Separation (buoyancy)
-    this.separationFilter = new PIXI.Filter(passthroughVert, separationFrag, {
-      uVelocity: PIXI.Texture.EMPTY,
-      uOilField: PIXI.Texture.EMPTY,
-      uWaterField: PIXI.Texture.EMPTY,
-      uTexelSize: [1 / this.simWidth, 1 / this.simHeight],
-      uOilDensity: this.config.oilDensity ?? 0.85,
-      uWaterDensity: this.config.waterDensity ?? 1.0,
-      uGravityStrength: this.config.gravityStrength ?? 0.4,
-      uGravityDir: this.computeGravityDir(),
+    this.separationFilter = new PIXI.Filter({
+      glProgram: GlProgram.from({
+        vertex: passthroughVert,
+        fragment: separationFrag,
+        name: 'separation',
+      }),
+      resources: {
+        uVelocity: PIXI.Texture.EMPTY,
+        uOilField: PIXI.Texture.EMPTY,
+        uWaterField: PIXI.Texture.EMPTY,
+        separationUniforms: {
+          uTexelSize: { value: [1 / this.simWidth, 1 / this.simHeight], type: 'vec2<f32>' },
+          uOilDensity: { value: this.config.oilDensity ?? 0.85, type: 'f32' },
+          uWaterDensity: { value: this.config.waterDensity ?? 1.0, type: 'f32' },
+          uGravityStrength: { value: this.config.gravityStrength ?? 0.4, type: 'f32' },
+          uGravityDir: { value: this.computeGravityDir(), type: 'vec2<f32>' },
+        },
+      },
     });
     
     // Shading
-    this.shadeFilter = new PIXI.Filter(passthroughVert, shadeFrag, {
-      uOilField: PIXI.Texture.EMPTY,
-      uWaterField: PIXI.Texture.EMPTY,
-      uBackground: PIXI.Texture.EMPTY,
-      uTexelSize: [1 / this.simWidth, 1 / this.simHeight],
-      uResolution: [this.app.renderer.width, this.app.renderer.height],
-      uRefractiveIndexOil: this.config.refractiveIndexOil ?? 1.45,
-      uGloss: this.config.gloss ?? 0.75,
-      uLightDir: this.computeLightDir(),
-      uLightIntensity: this.config.lightIntensity ?? 1.0,
-      uRefractionStrength: this.config.refractionStrength ?? 0.6,
-      uThinFilm: this.performanceMode ? false : (this.config.thinFilm ?? false),
+    this.shadeFilter = new PIXI.Filter({
+      glProgram: GlProgram.from({
+        vertex: passthroughVert,
+        fragment: shadeFrag,
+        name: 'shade',
+      }),
+      resources: {
+        uOilField: PIXI.Texture.EMPTY,
+        uWaterField: PIXI.Texture.EMPTY,
+        uBackground: PIXI.Texture.EMPTY,
+        shadeUniforms: {
+          uTexelSize: { value: [1 / this.simWidth, 1 / this.simHeight], type: 'vec2<f32>' },
+          uResolution: { value: [this.app.renderer.width, this.app.renderer.height], type: 'vec2<f32>' },
+          uRefractiveIndexOil: { value: this.config.refractiveIndexOil ?? 1.45, type: 'f32' },
+          uGloss: { value: this.config.gloss ?? 0.75, type: 'f32' },
+          uLightDir: { value: this.computeLightDir(), type: 'vec3<f32>' },
+          uLightIntensity: { value: this.config.lightIntensity ?? 1.0, type: 'f32' },
+          uRefractionStrength: { value: this.config.refractionStrength ?? 0.6, type: 'f32' },
+          uThinFilm: { value: this.performanceMode ? 0.0 : (this.config.thinFilm ? 1.0 : 0.0), type: 'f32' },
+        },
+      },
     });
   }
   
@@ -405,9 +487,9 @@ export class LiquidRenderer {
     this.quadSprite.height = this.app.renderer.height;
     this.quadSprite.filters = [this.shadeFilter];
     
-    this.shadeFilter.uniforms.uOilField = this.oilFieldRT[0];
-    this.shadeFilter.uniforms.uWaterField = this.waterFieldRT[0];
-    this.shadeFilter.uniforms.uBackground = this.backgroundRT;
+    (this.shadeFilter.resources as any).uOilField = this.oilFieldRT[0];
+    (this.shadeFilter.resources as any).uWaterField = this.waterFieldRT[0];
+    (this.shadeFilter.resources as any).uBackground = this.backgroundRT;
     
     this.app.renderer.render({
       container: this.quadSprite,
@@ -469,7 +551,7 @@ export class LiquidRenderer {
   public destroy() {
     this.pause();
     window.removeEventListener('resize', this.handleResize);
-    this.app.destroy(true, { children: true, texture: true, baseTexture: true });
+    this.app.destroy(true, { children: true, texture: true });
   }
   
   /**
@@ -481,9 +563,14 @@ export class LiquidRenderer {
   
   // ===== HELPERS =====
   
-  private applyFilter(filter: PIXI.Filter, source: PIXI.RenderTexture, target: PIXI.RenderTexture, uniforms?: Record<string, any>) {
-    if (uniforms) {
-      Object.assign(filter.uniforms, uniforms);
+  private applyFilter(filter: PIXI.Filter, source: PIXI.RenderTexture, target: PIXI.RenderTexture, resources?: Record<string, any>) {
+    // Update resources (textures and uniform groups)
+    if (resources) {
+      Object.entries(resources).forEach(([key, value]) => {
+        if (key in filter.resources) {
+          (filter.resources as any)[key] = value;
+        }
+      });
     }
     
     this.quadSprite.texture = source;
@@ -517,17 +604,23 @@ export class LiquidRenderer {
   
   private updateUniforms() {
     // Update dynamic uniforms based on current config
-    this.separationFilter.uniforms.uOilDensity = this.config.oilDensity ?? 0.85;
-    this.separationFilter.uniforms.uWaterDensity = this.config.waterDensity ?? 1.0;
-    this.separationFilter.uniforms.uGravityStrength = this.config.gravityStrength ?? 0.4;
-    this.separationFilter.uniforms.uGravityDir = this.computeGravityDir();
+    const sepUniforms = (this.separationFilter.resources as any).separationUniforms?.uniforms;
+    if (sepUniforms) {
+      sepUniforms.uOilDensity = this.config.oilDensity ?? 0.85;
+      sepUniforms.uWaterDensity = this.config.waterDensity ?? 1.0;
+      sepUniforms.uGravityStrength = this.config.gravityStrength ?? 0.4;
+      sepUniforms.uGravityDir = this.computeGravityDir();
+    }
     
-    this.shadeFilter.uniforms.uRefractiveIndexOil = this.config.refractiveIndexOil ?? 1.45;
-    this.shadeFilter.uniforms.uGloss = this.config.gloss ?? 0.75;
-    this.shadeFilter.uniforms.uLightDir = this.computeLightDir();
-    this.shadeFilter.uniforms.uLightIntensity = this.config.lightIntensity ?? 1.0;
-    this.shadeFilter.uniforms.uRefractionStrength = this.config.refractionStrength ?? 0.6;
-    this.shadeFilter.uniforms.uThinFilm = this.performanceMode ? false : (this.config.thinFilm ?? false);
+    const shadeUniforms = (this.shadeFilter.resources as any).shadeUniforms?.uniforms;
+    if (shadeUniforms) {
+      shadeUniforms.uRefractiveIndexOil = this.config.refractiveIndexOil ?? 1.45;
+      shadeUniforms.uGloss = this.config.gloss ?? 0.75;
+      shadeUniforms.uLightDir = this.computeLightDir();
+      shadeUniforms.uLightIntensity = this.config.lightIntensity ?? 1.0;
+      shadeUniforms.uRefractionStrength = this.config.refractionStrength ?? 0.6;
+      shadeUniforms.uThinFilm = this.performanceMode ? 0.0 : (this.config.thinFilm ? 1.0 : 0.0);
+    }
   }
   
   private handleResize = () => {

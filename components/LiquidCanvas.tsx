@@ -340,7 +340,7 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
         const preset = presets[sel[idxInSel]];
         if (preset) applyEphemeralPreset(preset.config, preset.name);
         (cycleStateRef.current as any).lastAt = now;
-        cycleStateRef.current.state = nextIndex(cycleMode, cycleStateRef.current.state, sel.length);
+        cycleStateRef.current.state = nextIndex(cycleMode as CycleMode, cycleStateRef.current.state, sel.length);
       }
     }
 
@@ -368,7 +368,7 @@ export const LiquidCanvas: React.FC<LiquidCanvasProps> = ({ config, isPlaying, a
         if (cycleCadence === 'per-stroke') {
           const preset = presets[selectedPresets[0]];
           if (preset) applyEphemeralPreset(preset.config, preset.name);
-          cycleStateRef.current.state = nextIndex(cycleMode, cycleStateRef.current.state, selectedPresets.length);
+          cycleStateRef.current.state = nextIndex(cycleMode as CycleMode, cycleStateRef.current.state, selectedPresets.length);
         }
       } else {
         cycleStateRef.current = null;
