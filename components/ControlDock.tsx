@@ -95,11 +95,12 @@ export const ControlDock: React.FC<ControlDockProps> = ({
   };
   const onDragEnd = (e: React.PointerEvent) => { draggingRef.current = null; };
 
+  const scale = 0.8; // compact by ~20%
   return (
     <div
       ref={dockRef}
       className="fixed z-[4000] select-none"
-      style={{ left: pos.x, top: pos.y }}
+      style={{ left: pos.x, top: pos.y, transform: `scale(${scale})`, transformOrigin: 'top left' }}
     >
       <div
         className="flex items-center gap-1 p-1 bg-gray-900/70 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl"
@@ -125,7 +126,7 @@ export const ControlDock: React.FC<ControlDockProps> = ({
         <button onClick={()=>setCollapsed(c=>!c)} className="px-2 py-1 text-xs rounded bg-gray-800/80 text-gray-200 hover:bg-gray-700">{collapsed?'Show':'Hide'}</button>
       </div>
       {!collapsed && (
-        <div className="mt-1 bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl p-2 w-[min(92vw,360px)] max-h-[60vh] overflow-auto">
+        <div className="mt-1 bg-gray-900/80 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl p-2 w-[min(92vw,300px)] max-h-[60vh] overflow-auto">
           {activeTab==='brush' && (
             <BrushPanel config={config} updateConfig={updateConfig} onSetSymmetryOrigin={onSetSymmetryOrigin} />
           )}
